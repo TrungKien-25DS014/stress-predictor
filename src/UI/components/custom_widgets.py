@@ -14,8 +14,8 @@ Author : Senior PyQt5 Engineer
 from __future__ import annotations
 
 from PyQt5.QtWidgets import (
-    QLineEdit, QPushButton, QWidget,
-    QGraphicsDropShadowEffect,
+    QLineEdit, QPushButton, QWidget, QSlider,
+    QGraphicsDropShadowEffect, QLabel, QVBoxLayout, QHBoxLayout,
 )
 from PyQt5.QtCore import Qt, QRectF, QPropertyAnimation, QEasingCurve
 from PyQt5.QtGui import (
