@@ -62,7 +62,7 @@ SURVEY_TABS: list[dict] = [
                 "label":   "1. Mức độ lo âu khi chuẩn bị cho kỳ thi?",
                 "hint":    "1 = Rất bình thản  ·  5 = Cực kỳ lo lắng",
                 "widget":  "slider",
-                "min": 1, "max": 5, "default": 3,
+                "min": 1, "max": 5, "default": 0,
                 "lo": "Bình thản", "hi": "Rất lo",
             },
             {
@@ -70,7 +70,7 @@ SURVEY_TABS: list[dict] = [
                 "label":   "2. Áp lực học tập từ nhà trường / gia đình?",
                 "hint":    "1 = Rất nhẹ  ·  5 = Cực kỳ nặng",
                 "widget":  "slider",
-                "min": 1, "max": 5, "default": 3,
+                "min": 1, "max": 5, "default": 0,
                 "lo": "Nhẹ", "hi": "Nặng",
             },
             {
@@ -78,7 +78,7 @@ SURVEY_TABS: list[dict] = [
                 "label":   "3. Số giờ tự học mỗi ngày?",
                 "hint":    "Trung bình trong tuần học",
                 "widget":  "spinbox",
-                "min": 0, "max": 20, "default": 4, "suffix": " giờ",
+                "min": 0, "max": 20, "default": 0, "suffix": " giờ",
             },
             {
                 "key":     "teacher_student_relationship",
@@ -86,7 +86,7 @@ SURVEY_TABS: list[dict] = [
                 "hint":    "Chất lượng hỗ trợ học thuật bạn nhận được",
                 "widget":  "radio",
                 "options": ["Rất tệ", "Tệ", "Bình thường", "Tốt", "Rất tốt"],
-                "default": 2,
+                "default": 0,
             },
         ],
     },
@@ -99,7 +99,7 @@ SURVEY_TABS: list[dict] = [
                 "label":   "5. Chất lượng giấc ngủ gần đây?",
                 "hint":    "1 = Rất tệ (mất ngủ, hay tỉnh)  ·  5 = Rất tốt (sâu giấc)",
                 "widget":  "slider",
-                "min": 1, "max": 5, "default": 3,
+                "min": 1, "max": 5, "default": 0,
                 "lo": "Rất tệ", "hi": "Rất tốt",
             },
             {
@@ -107,14 +107,14 @@ SURVEY_TABS: list[dict] = [
                 "label":   "6. Số giờ ngủ trung bình mỗi đêm?",
                 "hint":    "WHO khuyến nghị 7–9 giờ với sinh viên",
                 "widget":  "spinbox",
-                "min": 0, "max": 14, "default": 7, "suffix": " giờ",
+                "min": 0, "max": 14, "default": 0, "suffix": " giờ",
             },
             {
                 "key":     "headache",
                 "label":   "7. Tần suất đau đầu trong tuần qua?",
                 "hint":    "1 = Không đau đầu  ·  5 = Đau đầu mỗi ngày",
                 "widget":  "slider",
-                "min": 1, "max": 5, "default": 1,
+                "min": 1, "max": 5, "default": 0,
                 "lo": "Không", "hi": "Hàng ngày",
             },
             {
@@ -123,7 +123,7 @@ SURVEY_TABS: list[dict] = [
                 "hint":    "Tự đánh giá hoặc kết quả đo gần nhất",
                 "widget":  "radio",
                 "options": ["Thấp", "Bình thường", "Cao"],
-                "default": 1,
+                "default": 0,
             },
         ],
     },
@@ -144,7 +144,7 @@ SURVEY_TABS: list[dict] = [
                 "label":   "10. Mức độ cảm giác buồn bã / tuyệt vọng?",
                 "hint":    "1 = Không có  ·  5 = Thường xuyên, kéo dài",
                 "widget":  "slider",
-                "min": 1, "max": 5, "default": 1,
+                "min": 1, "max": 5, "default": 0,
                 "lo": "Không có", "hi": "Thường xuyên",
             },
             {
@@ -152,7 +152,7 @@ SURVEY_TABS: list[dict] = [
                 "label":   "11. Mức độ khó thở / tức ngực khi căng thẳng?",
                 "hint":    "1 = Không bao giờ  ·  5 = Rất thường xuyên",
                 "widget":  "slider",
-                "min": 1, "max": 5, "default": 1,
+                "min": 1, "max": 5, "default": 0,
                 "lo": "Không", "hi": "Thường xuyên",
             },
             {
@@ -160,7 +160,7 @@ SURVEY_TABS: list[dict] = [
                 "label":   "12. Môi trường học tập / sinh sống có ồn ào không?",
                 "hint":    "1 = Rất yên tĩnh  ·  5 = Rất ồn ào",
                 "widget":  "slider",
-                "min": 1, "max": 5, "default": 2,
+                "min": 1, "max": 5, "default": 0,
                 "lo": "Yên tĩnh", "hi": "Rất ồn",
             },
         ],
@@ -174,7 +174,7 @@ SURVEY_TABS: list[dict] = [
                 "label":   "13. Mức độ hỗ trợ xã hội bạn cảm nhận được?",
                 "hint":    "Từ gia đình, bạn bè, thầy cô…",
                 "widget":  "slider",
-                "min": 1, "max": 5, "default": 3,
+                "min": 1, "max": 5, "default": 0,
                 "lo": "Cô đơn", "hi": "Rất được hỗ trợ",
             },
             {
@@ -182,7 +182,7 @@ SURVEY_TABS: list[dict] = [
                 "label":   "14. Áp lực từ bạn bè / nhóm đồng lứa?",
                 "hint":    "1 = Không có  ·  5 = Rất lớn",
                 "widget":  "slider",
-                "min": 1, "max": 5, "default": 2,
+                "min": 1, "max": 5, "default": 0,
                 "lo": "Không có", "hi": "Rất lớn",
             },
             {
@@ -190,14 +190,14 @@ SURVEY_TABS: list[dict] = [
                 "label":   "15. Số hoạt động ngoại khoá bạn tham gia?",
                 "hint":    "CLB, thể thao, tình nguyện, part-time…",
                 "widget":  "spinbox",
-                "min": 0, "max": 10, "default": 1, "suffix": " hoạt động",
+                "min": 0, "max": 10, "default": 0, "suffix": " hoạt động",
             },
             {
                 "key":     "bullying",
                 "label":   "16. Bạn có từng bị bắt nạt / quấy rối?",
                 "hint":    "1 = Chưa bao giờ  ·  5 = Rất thường xuyên",
                 "widget":  "slider",
-                "min": 1, "max": 5, "default": 1,
+                "min": 1, "max": 5, "default": 0,
                 "lo": "Không", "hi": "Thường xuyên",
             },
         ],
@@ -211,14 +211,14 @@ SURVEY_TABS: list[dict] = [
                 "label":   "17. Nhịp tim lúc nghỉ ngơi (bpm)?",
                 "hint":    "Người khoẻ mạnh thường 60–100 bpm",
                 "widget":  "spinbox",
-                "min": 40, "max": 180, "default": 75, "suffix": " bpm",
+                "min": 40, "max": 180, "default": 0, "suffix": " bpm",
             },
             {
                 "key":     "bmi",
                 "label":   "18. Chỉ số BMI của bạn?",
                 "hint":    "BMI = cân nặng (kg) / chiều cao² (m²)",
                 "widget":  "dspinbox",
-                "min": 10.0, "max": 50.0, "default": 22.0,
+                "min": 10.0, "max": 50.0, "default": 0.0,
                 "step": 0.1, "decimals": 1, "suffix": " BMI",
             },
             {
@@ -226,7 +226,7 @@ SURVEY_TABS: list[dict] = [
                 "label":   "19. Mức độ tự tin / tự trọng của bạn?",
                 "hint":    "1 = Rất thấp (tự ti)  ·  5 = Rất cao (tự tin)",
                 "widget":  "slider",
-                "min": 1, "max": 5, "default": 3,
+                "min": 1, "max": 5, "default": 0,
                 "lo": "Rất thấp", "hi": "Rất cao",
             },
             {
@@ -234,7 +234,7 @@ SURVEY_TABS: list[dict] = [
                 "label":   "20. Lo lắng về tương lai nghề nghiệp?",
                 "hint":    "1 = Không lo  ·  5 = Lo lắng rất nhiều",
                 "widget":  "slider",
-                "min": 1, "max": 5, "default": 3,
+                "min": 1, "max": 5, "default": 0,
                 "lo": "Không lo", "hi": "Rất lo",
             },
         ],
@@ -336,6 +336,7 @@ _TAB_CSS = f"""
         border-top-left-radius: 8px;
         border-top-right-radius: 8px;
         margin-right: 2px;
+        min-width: 90px;
     }}
     QTabBar::tab:selected {{
         background: {C['white']};
