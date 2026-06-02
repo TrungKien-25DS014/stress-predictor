@@ -281,6 +281,7 @@ class RightPanel(QFrame):
         hello_lbl.setStyleSheet(f"color: {COLORS['text_muted']}; background: transparent;")
 
         name_lbl = QLabel(self.user_name)
+        name_lbl.setObjectName("greeting_name_lbl")
         name_lbl.setFont(QFont("Segoe UI Semibold", 12))
         name_lbl.setStyleSheet(f"color: {COLORS['text_primary']}; background: transparent;")
         name_lbl.setWordWrap(True)
@@ -377,6 +378,18 @@ class RightPanel(QFrame):
         root.addWidget(tip_card)
 
         root.addStretch()
+
+    # ------------------------------------------------------------------
+    def set_user(self, display_name: str):
+        """
+        Cập nhật tên người dùng trong greeting card.
+        Gọi từ MainWindow.set_user() sau khi login_success.
+        """
+        self.user_name = display_name
+        from PyQt5.QtWidgets import QLabel
+        lbl = self.findChild(QLabel, "greeting_name_lbl")
+        if lbl:
+            lbl.setText(display_name)
 
     # ------------------------------------------------------------------
     def _apply_styles(self):
@@ -537,6 +550,21 @@ class MainWindow(QMainWindow):
                 border: none;
             }}
         """)
+
+    # ------------------------------------------------------------------
+    # API công khai – cập nhật người dùng sau login
+    # ------------------------------------------------------------------
+    def set_user(self, display_name: str):
+        """
+        Cập nhật tên hiển thị toàn cửa sổ sau khi đăng nhập thành công.
+        Được gọi từ main.py ngay sau khi MainWindow được khởi tạo.
+
+        Args:
+            display_name: Tên đầy đủ người dùng (vd: "Phan Trung Kiên")
+        """
+        self.setWindowTitle(f"Stress Predictor – {display_name}")
+        self.right_panel.set_user(display_name)
+
     # ===================================================================
 # RUN APPLICATION
 # ===================================================================
