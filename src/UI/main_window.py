@@ -13,8 +13,10 @@ from PyQt5.QtWidgets import (
 )
 from PyQt5.QtCore import Qt, QDate, QSize
 from PyQt5.QtGui import QFont, QColor, QPalette, QIcon
+from src.UI.components.custom_widgets import MetricCard
 
 from src.UI.screens.survey import SurveyScreen
+from src.UI.screens.dashboard import DashboardScreen
 # ---------------------------------------------------------------------------
 # Design Tokens – Clinical Light
 # ---------------------------------------------------------------------------
@@ -48,20 +50,12 @@ FONTS = {
 # ──  PLACEHOLDER SCREENS  (sẽ được implement ở các file riêng)
 # ===========================================================================
 
-class DashboardScreen(QWidget):
-    """Màn hình Tổng quan (Dashboard)."""
-    def __init__(self, parent=None):
-        super().__init__(parent)
-        self._build_ui()
 
-    def _build_ui(self):
-        layout = QVBoxLayout(self)
-        layout.setAlignment(Qt.AlignCenter)
-        lbl = QLabel("📊  Dashboard Screen\n(Placeholder – sẽ được implement tại screens/dashboard.py)")
-        lbl.setFont(FONTS["body"])
-        lbl.setAlignment(Qt.AlignCenter)
-        lbl.setStyleSheet(f"color: {COLORS['text_muted']};")
-        layout.addWidget(lbl)
+
+# Lưu ý: Nhớ import class MetricCard từ file custom_widgets của bạn
+# from src.ui.custom_widgets import MetricCard 
+
+
 
 
 
@@ -376,6 +370,39 @@ class RightPanel(QFrame):
         tip_layout.addWidget(tip_body)
         root.addWidget(tip_card)
 
+        # ── Kiến thức về stress ──────────────────────────────────────
+        know_lbl = QLabel("🧠  Bạn có biết?")
+        know_lbl.setFont(QFont("Segoe UI Semibold", 10))
+        know_lbl.setStyleSheet(f"color: {COLORS['text_primary']};")
+        root.addWidget(know_lbl)
+
+        facts = [
+            ("😰", "Stress kéo dài làm giảm khả năng ghi nhớ và tập trung."),
+            ("🫀", "Cortisol cao liên tục ảnh hưởng đến tim mạch và hệ miễn dịch."),
+            ("🌿", "Thiên nhiên và cây xanh giúp giảm stress hiệu quả trong 5 phút."),
+        ]
+        for emoji, text in facts:
+            row = QFrame()
+            row.setObjectName("fact_row")
+            rl = QHBoxLayout(row)
+            rl.setContentsMargins(10, 8, 10, 8)
+            rl.setSpacing(8)
+
+            e_lbl = QLabel(emoji)
+            e_lbl.setFont(QFont("Segoe UI", 11))
+            e_lbl.setStyleSheet("background: transparent; border: none;")
+            e_lbl.setFixedWidth(22)
+            e_lbl.setAlignment(Qt.AlignTop)
+
+            t_lbl = QLabel(text)
+            t_lbl.setFont(FONTS["caption"])
+            t_lbl.setWordWrap(True)
+            t_lbl.setStyleSheet(f"color: {COLORS['text_muted']}; background: transparent; border: none;")
+
+            rl.addWidget(e_lbl)
+            rl.addWidget(t_lbl, 1)
+            root.addWidget(row)
+
         root.addStretch()
 
     # ------------------------------------------------------------------
@@ -394,6 +421,11 @@ class RightPanel(QFrame):
                 background-color: {COLORS['bg_main']};
                 border: 1px solid {COLORS['divider']};
                 border-radius: 10px;
+            }}
+            QFrame#fact_row {{
+                background-color: {COLORS['white']};
+                border: 1px solid {COLORS['divider']};
+                border-radius: 8px;
             }}
         """)
 
@@ -476,22 +508,27 @@ class MainWindow(QMainWindow):
         self.right_panel = RightPanel(user_name="Nguyễn Hữu Bảo")
         self.right_panel.setObjectName("right_panel")
 
-        # ── Thêm vào layout với tỷ lệ 2:6:2 ─────────────────────────
-        main_layout.addWidget(self.sidebar,     stretch=2)
-        main_layout.addWidget(self.stack,       stretch=6)
+# ── Giải phóng kích thước cố định để dùng tỷ lệ phần trăm ──
+        # Chỉ giữ lại MinimumWidth để giao diện không bị bóp méo khi cửa sổ quá nhỏ
+        self.sidebar.setMinimumWidth(200) 
+        self.sidebar.setMaximumWidth(16777215) # 16777215 là giá trị max mặc định của PyQt5 (vô hạn)
+        
+        self.right_panel.setMinimumWidth(200)
+        self.right_panel.setMaximumWidth(16777215)
+        
+        self.stack.setMinimumWidth(400)
+
+        # ── Thiết lập tỷ lệ 20% (Sidebar) - 60% (Stack) - 20% (Right Panel) ──
+        main_layout.addWidget(self.sidebar, stretch=2)
+        main_layout.addWidget(self.stack, stretch=6)
         main_layout.addWidget(self.right_panel, stretch=2)
 
     # ------------------------------------------------------------------
     # 3. Kết nối điều hướng
     # ------------------------------------------------------------------
     def _connect_navigation(self):
-        """
-        Kết nối mỗi nút nav trong Sidebar với phương thức chuyển trang.
-        Sử dụng lambda để truyền đúng index vào slot.
-        """
         for btn in self.sidebar.nav_buttons:
             idx = btn.property("nav_index")
-            # Dùng default argument để tránh vấn đề closure trong vòng lặp
             btn.clicked.connect(
                 lambda checked, i=idx: self._navigate_to(i)
             )

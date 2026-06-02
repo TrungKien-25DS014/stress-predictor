@@ -6,7 +6,7 @@ def predict_stress(user_input_dict):
     Hàm này nhận dữ liệu từ giao diện, đưa vào AI và trả về kết quả dự đoán.
     """
     try:
-        model = joblib.load("models/stress_model.pkl")
+        model = joblib.load("models/stress_model_random_forest.pkl")
         df = pd.DataFrame([user_input_dict])
         result = model.predict(df)[0]
         return result

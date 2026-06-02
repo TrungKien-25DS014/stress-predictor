@@ -16,6 +16,7 @@ from __future__ import annotations
 from PyQt5.QtWidgets import (
     QLineEdit, QPushButton, QWidget, QSlider,
     QGraphicsDropShadowEffect, QLabel, QVBoxLayout, QHBoxLayout,
+    QFrame, QSizePolicy, QLayout, QSpacerItem,
 )
 from PyQt5.QtCore import Qt, QRectF, QPropertyAnimation, QEasingCurve
 from PyQt5.QtGui import (
@@ -736,3 +737,75 @@ class StyledSlider(QWidget):
 
     def setValue(self, v: int):
         self._slider.setValue(v)
+
+class MetricCard(QFrame):
+    """Card hiển thị một chỉ số đơn lẻ với accent bar màu ở đỉnh."""
+
+    def __init__(
+        self,
+        title: str,
+        value: str = "–",
+        accent_color: str = "#4A90D9",
+        parent: QWidget | None = None,
+    ) -> None:
+        super().__init__(parent)
+        self._title = title
+        self._value = value
+        self._accent_color = accent_color
+        self._build_ui()
+        self._apply_style()
+
+    # ── Public API ──────────────────────────────────────────────────────────
+    def set_value(self, value: str) -> None:
+        self._value_label.setText(value)
+
+    def set_title(self, title: str) -> None:
+        self._title_label.setText(title)
+
+    # ── Private ─────────────────────────────────────────────────────────────
+    def _build_ui(self) -> None:
+        layout = QVBoxLayout(self)
+        layout.setContentsMargins(18, 16, 18, 16)
+        layout.setSpacing(8)
+
+        self._accent_bar = QFrame()
+        self._accent_bar.setFixedHeight(4)
+        self._accent_bar.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
+
+        self._title_label = QLabel(self._title)
+        self._title_label.setAlignment(Qt.AlignLeft | Qt.AlignTop)
+        self._title_label.setWordWrap(True)
+
+        self._value_label = QLabel(self._value)
+        self._value_label.setAlignment(Qt.AlignLeft | Qt.AlignBottom)
+
+        layout.addWidget(self._accent_bar)
+        layout.addWidget(self._title_label)
+        layout.addStretch()
+        layout.addWidget(self._value_label)
+
+    def _apply_style(self) -> None:
+        self._accent_bar.setStyleSheet(
+            f"background-color: {self._accent_color}; border-radius: 2px;"
+        )
+        self.setStyleSheet(
+            f"""
+            MetricCard {{
+                background-color: #FFFFFF;
+                border-radius: 12px;
+                border: 1px solid #E8EDF2;
+            }}
+            MetricCard:hover {{
+                border: 1px solid {self._accent_color};
+            }}
+            """
+        )
+        title_font = QFont("Segoe UI", 11)
+        title_font.setWeight(QFont.Normal)
+        self._title_label.setFont(title_font)
+        self._title_label.setStyleSheet("color: #6B7280;")
+
+        value_font = QFont("Segoe UI", 28)
+        value_font.setWeight(QFont.Bold)
+        self._value_label.setFont(value_font)
+        self._value_label.setStyleSheet("color: #1A1D2E;")
