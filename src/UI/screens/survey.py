@@ -806,3 +806,14 @@ class SurveyScreen(QWidget):
     # ------------------------------------------------------------------
     def _apply_base_styles(self):
         self.setStyleSheet(f"QWidget {{ background: {C['bg']}; }}")
+    
+if __name__ == "__main__":
+    import sys
+    from PyQt5.QtWidgets import QApplication
+
+    app = QApplication(sys.argv)
+
+    window = SurveyScreen()
+    window.resize(1400, 900)
+    window.show()
+    sys.exit(app.exec_())
