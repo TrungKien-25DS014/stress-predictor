@@ -3,12 +3,19 @@ src/UI/screens/survey.py
 ------------------------
 Màn hình Khảo sát – Thu thập 20 yếu tố đầu vào cho mô hình dự đoán Stress.
 
-Cấu trúc 5 Tab × 4 câu hỏi:
-  Tab 1 – Học tập & Áp lực       (anxiety, academic_pressure, study_hours, teacher_relationship)
-  Tab 2 – Giấc ngủ & Thể chất    (sleep_quality, sleep_hours, headache, blood_pressure)
-  Tab 3 – Sức khoẻ tâm thần      (mental_health, depression, breathe_problem, noise_level)
-  Tab 4 – Xã hội & Môi trường    (social_support, peer_pressure, extracurricular, bullying)
-  Tab 5 – Sinh lý & Lối sống     (heart_rate, bmi, self_esteem, future_career)
+Cấu trúc 5 Tab × 4 câu hỏi (đồng bộ với StressLevelDataset.csv):
+  Tab 1 – Tâm lý          (anxiety_level, self_esteem, mental_health_history, depression)
+  Tab 2 – Thể chất        (headache, blood_pressure, sleep_quality, breathing_problem)
+  Tab 3 – Môi trường      (noise_level, living_conditions, safety, basic_needs)
+  Tab 4 – Học tập         (academic_performance, study_load, teacher_student_relationship, future_career_concerns)
+  Tab 5 – Xã hội          (social_support, peer_pressure, extracurricular_activities, bullying)
+
+Thứ tự payload khớp đúng với features trong stress_model_random_forest_meta.json:
+  [anxiety_level, self_esteem, mental_health_history, depression,
+   headache, blood_pressure, sleep_quality, breathing_problem,
+   noise_level, living_conditions, safety, basic_needs,
+   academic_performance, study_load, teacher_student_relationship, future_career_concerns,
+   social_support, peer_pressure, extracurricular_activities, bullying]
 
 Design: Clinical Light – nhất quán với custom_widgets.py
 """
@@ -53,87 +60,30 @@ TOTAL_QUESTIONS = 20
 # 20 câu hỏi chia theo 5 Tab
 # ---------------------------------------------------------------------------
 SURVEY_TABS: list[dict] = [
+    # ── Tab 1: Tâm lý & Học tập ──────────────────────────────────────────
+    # Dataset features: anxiety_level (0–21), self_esteem (0–30),
+    #                   mental_health_history (0/1), depression (0–27)
     {
-        "tab_label": "📚  Học tập",
-        "tab_key":   "academics",
-        "questions": [
-            {
-                "key":     "anxiety_level",
-                "label":   "1. Mức độ lo âu khi chuẩn bị cho kỳ thi?",
-                "hint":    "1 = Rất bình thản  ·  5 = Cực kỳ lo lắng",
-                "widget":  "slider",
-                "min": 1, "max": 5, "default": 0,
-                "lo": "Bình thản", "hi": "Rất lo",
-            },
-            {
-                "key":     "academic_pressure",
-                "label":   "2. Áp lực học tập từ nhà trường / gia đình?",
-                "hint":    "1 = Rất nhẹ  ·  5 = Cực kỳ nặng",
-                "widget":  "slider",
-                "min": 1, "max": 5, "default": 0,
-                "lo": "Nhẹ", "hi": "Nặng",
-            },
-            {
-                "key":     "study_hours",
-                "label":   "3. Số giờ tự học mỗi ngày?",
-                "hint":    "Trung bình trong tuần học",
-                "widget":  "spinbox",
-                "min": 0, "max": 20, "default": 0, "suffix": " giờ",
-            },
-            {
-                "key":     "teacher_student_relationship",
-                "label":   "4. Mối quan hệ với giảng viên / giáo viên?",
-                "hint":    "Chất lượng hỗ trợ học thuật bạn nhận được",
-                "widget":  "radio",
-                "options": ["Rất tệ", "Tệ", "Bình thường", "Tốt", "Rất tốt"],
-                "default": 0,
-            },
-        ],
-    },
-    {
-        "tab_label": "😴  Giấc ngủ",
-        "tab_key":   "sleep",
-        "questions": [
-            {
-                "key":     "sleep_quality",
-                "label":   "5. Chất lượng giấc ngủ gần đây?",
-                "hint":    "1 = Rất tệ (mất ngủ, hay tỉnh)  ·  5 = Rất tốt (sâu giấc)",
-                "widget":  "slider",
-                "min": 1, "max": 5, "default": 0,
-                "lo": "Rất tệ", "hi": "Rất tốt",
-            },
-            {
-                "key":     "sleep_hours",
-                "label":   "6. Số giờ ngủ trung bình mỗi đêm?",
-                "hint":    "WHO khuyến nghị 7–9 giờ với sinh viên",
-                "widget":  "spinbox",
-                "min": 0, "max": 14, "default": 0, "suffix": " giờ",
-            },
-            {
-                "key":     "headache",
-                "label":   "7. Tần suất đau đầu trong tuần qua?",
-                "hint":    "1 = Không đau đầu  ·  5 = Đau đầu mỗi ngày",
-                "widget":  "slider",
-                "min": 1, "max": 5, "default": 0,
-                "lo": "Không", "hi": "Hàng ngày",
-            },
-            {
-                "key":     "blood_pressure",
-                "label":   "8. Huyết áp của bạn hiện tại?",
-                "hint":    "Tự đánh giá hoặc kết quả đo gần nhất",
-                "widget":  "radio",
-                "options": ["Thấp", "Bình thường", "Cao"],
-                "default": 0,
-            },
-        ],
-    },
-    {
-        "tab_label": "🧠  Tâm thần",
+        "tab_label": "🧠  Tâm lý",
         "tab_key":   "mental",
         "questions": [
             {
+                "key":     "anxiety_level",
+                "label":   "1. Mức độ lo âu trong thời gian gần đây?",
+                "hint":    "0 = Hoàn toàn không lo  ·  21 = Lo âu cực kỳ nghiêm trọng",
+                "widget":  "spinbox",
+                "min": 0, "max": 21, "default": 0, "suffix": " điểm",
+            },
+            {
+                "key":     "self_esteem",
+                "label":   "2. Mức độ tự tin / tự trọng của bạn?",
+                "hint":    "0 = Rất thấp (tự ti, mặc cảm)  ·  30 = Rất cao (tự tin)",
+                "widget":  "spinbox",
+                "min": 0, "max": 30, "default": 0, "suffix": " điểm",
+            },
+            {
                 "key":     "mental_health_history",
-                "label":   "9. Bạn có tiền sử vấn đề sức khoẻ tâm thần?",
+                "label":   "3. Bạn có tiền sử vấn đề sức khoẻ tâm thần?",
                 "hint":    "Bao gồm rối loạn lo âu, trầm cảm, ADHD…",
                 "widget":  "radio",
                 "options": ["Không có", "Có"],
@@ -141,101 +91,175 @@ SURVEY_TABS: list[dict] = [
             },
             {
                 "key":     "depression",
-                "label":   "10. Mức độ cảm giác buồn bã / tuyệt vọng?",
-                "hint":    "1 = Không có  ·  5 = Thường xuyên, kéo dài",
-                "widget":  "slider",
-                "min": 1, "max": 5, "default": 0,
-                "lo": "Không có", "hi": "Thường xuyên",
-            },
-            {
-                "key":     "breathing_problem",
-                "label":   "11. Mức độ khó thở / tức ngực khi căng thẳng?",
-                "hint":    "1 = Không bao giờ  ·  5 = Rất thường xuyên",
-                "widget":  "slider",
-                "min": 1, "max": 5, "default": 0,
-                "lo": "Không", "hi": "Thường xuyên",
-            },
-            {
-                "key":     "noise_level",
-                "label":   "12. Môi trường học tập / sinh sống có ồn ào không?",
-                "hint":    "1 = Rất yên tĩnh  ·  5 = Rất ồn ào",
-                "widget":  "slider",
-                "min": 1, "max": 5, "default": 0,
-                "lo": "Yên tĩnh", "hi": "Rất ồn",
+                "label":   "4. Mức độ trầm cảm / buồn bã / tuyệt vọng?",
+                "hint":    "0 = Không có  ·  27 = Trầm cảm nặng, liên tục",
+                "widget":  "spinbox",
+                "min": 0, "max": 27, "default": 0, "suffix": " điểm",
             },
         ],
     },
+    # ── Tab 2: Thể chất & Giấc ngủ ──────────────────────────────────────
+    # Dataset features: headache (0–5), blood_pressure (1–3),
+    #                   sleep_quality (0–5), breathing_problem (0–5)
+    {
+        "tab_label": "💊  Thể chất",
+        "tab_key":   "physical",
+        "questions": [
+            {
+                "key":     "headache",
+                "label":   "5. Tần suất đau đầu trong tuần qua?",
+                "hint":    "0 = Không đau đầu  ·  5 = Đau đầu mỗi ngày",
+                "widget":  "slider",
+                "min": 0, "max": 5, "default": 0,
+                "lo": "Không", "hi": "Hàng ngày",
+            },
+            {
+                "key":     "blood_pressure",
+                "label":   "6. Huyết áp của bạn hiện tại?",
+                "hint":    "Tự đánh giá hoặc kết quả đo gần nhất",
+                "widget":  "radio",
+                "options": ["Thấp (1)", "Bình thường (2)", "Cao (3)"],
+                "default": 1,
+                "value_offset": 1, # Vì dataset dùng 1-3 nhưng radio index là 0-2
+            },
+            {
+                "key":     "sleep_quality",
+                "label":   "7. Chất lượng giấc ngủ gần đây?",
+                "hint":    "0 = Rất tệ (mất ngủ, hay tỉnh)  ·  5 = Rất tốt (sâu giấc)",
+                "widget":  "slider",
+                "min": 0, "max": 5, "default": 0,
+                "lo": "Rất tệ", "hi": "Rất tốt",
+            },
+            {
+                "key":     "breathing_problem",
+                "label":   "8. Mức độ khó thở / tức ngực khi căng thẳng?",
+                "hint":    "0 = Không bao giờ  ·  5 = Rất thường xuyên",
+                "widget":  "slider",
+                "min": 0, "max": 5, "default": 0,
+                "lo": "Không bao giờ", "hi": "Rất thường xuyên",
+            },
+        ],
+    },
+    # ── Tab 3: Môi trường sống ───────────────────────────────────────────
+    # Dataset features: noise_level (0–5), living_conditions (0–5),
+    #                   safety (0–5), basic_needs (0–5)
+    {
+        "tab_label": "🏠  Môi trường",
+        "tab_key":   "environment",
+        "questions": [
+            {
+                "key":     "noise_level",
+                "label":   "9. Môi trường học tập / sinh sống có ồn ào không?",
+                "hint":    "0 = Rất yên tĩnh  ·  5 = Rất ồn ào, mất tập trung",
+                "widget":  "slider",
+                "min": 0, "max": 5, "default": 0,
+                "lo": "Yên tĩnh", "hi": "Rất ồn",
+            },
+            {
+                "key":     "living_conditions",
+                "label":   "10. Điều kiện sinh sống hiện tại của bạn?",
+                "hint":    "0 = Rất tệ (chật chội, ẩm thấp)  ·  5 = Rất tốt (thoải mái)",
+                "widget":  "slider",
+                "min": 0, "max": 5, "default": 0,
+                "lo": "Rất tệ", "hi": "Rất tốt",
+            },
+            {
+                "key":     "safety",
+                "label":   "11. Mức độ an toàn bạn cảm thấy ở nơi ở / trường học?",
+                "hint":    "0 = Rất không an toàn  ·  5 = Hoàn toàn an toàn",
+                "widget":  "slider",
+                "min": 0, "max": 5, "default": 0,
+                "lo": "Không an toàn", "hi": "Rất an toàn",
+            },
+            {
+                "key":     "basic_needs",
+                "label":   "12. Các nhu cầu cơ bản của bạn có được đáp ứng đầy đủ?",
+                "hint":    "Ăn uống, chỗ ở, y tế… — 0 = Thiếu thốn  ·  5 = Đầy đủ",
+                "widget":  "slider",
+                "min": 0, "max": 5, "default": 0,
+                "lo": "Thiếu thốn", "hi": "Đầy đủ",
+            },
+        ],
+    },
+    # ── Tab 4: Học tập & Nghề nghiệp ────────────────────────────────────
+    # Dataset features: academic_performance (0–5), study_load (0–5),
+    #                   teacher_student_relationship (0–5), future_career_concerns (0–5)
+    {
+        "tab_label": "📚  Học tập",
+        "tab_key":   "academics",
+        "questions": [
+            {
+                "key":     "academic_performance",
+                "label":   "13. Kết quả học tập của bạn hiện tại?",
+                "hint":    "0 = Rất kém (trượt môn)  ·  5 = Xuất sắc (top lớp)",
+                "widget":  "slider",
+                "min": 0, "max": 5, "default": 0,
+                "lo": "Rất kém", "hi": "Xuất sắc",
+            },
+            {
+                "key":     "study_load",
+                "label":   "14. Khối lượng bài vở / công việc học tập hiện tại?",
+                "hint":    "0 = Rất nhẹ nhàng  ·  5 = Cực kỳ nặng nề, quá tải",
+                "widget":  "slider",
+                "min": 0, "max": 5, "default": 0,
+                "lo": "Nhẹ nhàng", "hi": "Quá tải",
+            },
+            {
+                "key":     "teacher_student_relationship",
+                "label":   "15. Mối quan hệ với giảng viên / giáo viên?",
+                "hint":    "Chất lượng hỗ trợ học thuật bạn nhận được",
+                "widget":  "radio",
+                "options": ["Rất tệ (0)", "Tệ (1)", "Bình thường (2)", "Khá Tốt (3)", "Tốt (4)", "Rất tốt (5)"],
+                "default": 2,
+            },
+            {
+                "key":     "future_career_concerns",
+                "label":   "16. Lo lắng về tương lai / nghề nghiệp sau khi ra trường?",
+                "hint":    "0 = Không lo  ·  5 = Lo lắng rất nhiều, mất ngủ vì nghề nghiệp",
+                "widget":  "slider",
+                "min": 0, "max": 5, "default": 0,
+                "lo": "Không lo", "hi": "Rất lo",
+            },
+        ],
+    },
+    # ── Tab 5: Xã hội & Hành vi ──────────────────────────────────────────
+    # Dataset features: social_support (0–3), peer_pressure (0–5),
+    #                   extracurricular_activities (0–5), bullying (0–5)
     {
         "tab_label": "🤝  Xã hội",
         "tab_key":   "social",
         "questions": [
             {
                 "key":     "social_support",
-                "label":   "13. Mức độ hỗ trợ xã hội bạn cảm nhận được?",
-                "hint":    "Từ gia đình, bạn bè, thầy cô…",
-                "widget":  "slider",
-                "min": 1, "max": 5, "default": 0,
-                "lo": "Cô đơn", "hi": "Rất được hỗ trợ",
+                "label":   "17. Mức độ hỗ trợ xã hội bạn cảm nhận được?",
+                "hint":    "Từ gia đình, bạn bè, thầy cô — 0 = Cô đơn  ·  3 = Được hỗ trợ rất tốt",
+                "widget":  "radio",
+                "options": ["Không có (0)", "Ít (1)", "Trung bình (2)", "Tốt (3)"],
+                "default": 1,
             },
             {
                 "key":     "peer_pressure",
-                "label":   "14. Áp lực từ bạn bè / nhóm đồng lứa?",
-                "hint":    "1 = Không có  ·  5 = Rất lớn",
+                "label":   "18. Áp lực từ bạn bè / nhóm đồng lứa?",
+                "hint":    "0 = Không có  ·  5 = Rất lớn, ảnh hưởng nhiều đến quyết định",
                 "widget":  "slider",
-                "min": 1, "max": 5, "default": 0,
+                "min": 0, "max": 5, "default": 0,
                 "lo": "Không có", "hi": "Rất lớn",
             },
             {
-                "key":     "extracurricular",
-                "label":   "15. Số hoạt động ngoại khoá bạn tham gia?",
-                "hint":    "CLB, thể thao, tình nguyện, part-time…",
-                "widget":  "spinbox",
-                "min": 0, "max": 10, "default": 0, "suffix": " hoạt động",
+                "key":     "extracurricular_activities",
+                "label":   "19. Mức độ tham gia hoạt động ngoại khoá?",
+                "hint":    "CLB, thể thao, tình nguyện… — 0 = Không tham gia  ·  5 = Rất tích cực",
+                "widget":  "slider",
+                "min": 0, "max": 5, "default": 0,
+                "lo": "Không", "hi": "Rất tích cực",
             },
             {
                 "key":     "bullying",
-                "label":   "16. Bạn có từng bị bắt nạt / quấy rối?",
-                "hint":    "1 = Chưa bao giờ  ·  5 = Rất thường xuyên",
+                "label":   "20. Bạn có bị bắt nạt / quấy rối tại trường / nơi ở?",
+                "hint":    "0 = Chưa bao giờ  ·  5 = Rất thường xuyên, ảnh hưởng nặng",
                 "widget":  "slider",
-                "min": 1, "max": 5, "default": 0,
-                "lo": "Không", "hi": "Thường xuyên",
-            },
-        ],
-    },
-    {
-        "tab_label": "💪  Sinh lý",
-        "tab_key":   "physiology",
-        "questions": [
-            {
-                "key":     "heart_rate",
-                "label":   "17. Nhịp tim lúc nghỉ ngơi (bpm)?",
-                "hint":    "Người khoẻ mạnh thường 60–100 bpm",
-                "widget":  "spinbox",
-                "min": 40, "max": 180, "default": 0, "suffix": " bpm",
-            },
-            {
-                "key":     "bmi",
-                "label":   "18. Chỉ số BMI của bạn?",
-                "hint":    "BMI = cân nặng (kg) / chiều cao² (m²)",
-                "widget":  "dspinbox",
-                "min": 10.0, "max": 50.0, "default": 0.0,
-                "step": 0.1, "decimals": 1, "suffix": " BMI",
-            },
-            {
-                "key":     "self_esteem",
-                "label":   "19. Mức độ tự tin / tự trọng của bạn?",
-                "hint":    "1 = Rất thấp (tự ti)  ·  5 = Rất cao (tự tin)",
-                "widget":  "slider",
-                "min": 1, "max": 5, "default": 0,
-                "lo": "Rất thấp", "hi": "Rất cao",
-            },
-            {
-                "key":     "future_career_concerns",
-                "label":   "20. Lo lắng về tương lai nghề nghiệp?",
-                "hint":    "1 = Không lo  ·  5 = Lo lắng rất nhiều",
-                "widget":  "slider",
-                "min": 1, "max": 5, "default": 0,
-                "lo": "Không lo", "hi": "Rất lo",
+                "min": 0, "max": 5, "default": 0,
+                "lo": "Không bao giờ", "hi": "Thường xuyên",
             },
         ],
     },
@@ -336,7 +360,7 @@ _TAB_CSS = f"""
         border-top-left-radius: 8px;
         border-top-right-radius: 8px;
         margin-right: 2px;
-        min-width: 90px;
+        min-width: 100px;
     }}
     QTabBar::tab:selected {{
         background: {C['white']};
@@ -787,12 +811,12 @@ class SurveyScreen(QWidget):
     # ------------------------------------------------------------------
     def get_payload(self) -> list[float]:
         """
-        Trả về mảng 20 giá trị float theo thứ tự:
-          [anxiety_level, academic_pressure, study_hours, teacher_student_relationship,
-           sleep_quality, sleep_hours, headache, blood_pressure,
-           mental_health_history, depression, breathing_problem, noise_level,
-           social_support, peer_pressure, extracurricular, bullying,
-           heart_rate, bmi, self_esteem, future_career_concerns]
+        Trả về mảng 20 giá trị float theo đúng thứ tự features của model:
+          [anxiety_level, self_esteem, mental_health_history, depression,
+           headache, blood_pressure, sleep_quality, breathing_problem,
+           noise_level, living_conditions, safety, basic_needs,
+           academic_performance, study_load, teacher_student_relationship, future_career_concerns,
+           social_support, peer_pressure, extracurricular_activities, bullying]
         """
         return [card.get_value() for card in self._cards]
 

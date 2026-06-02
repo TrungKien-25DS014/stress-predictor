@@ -1,6 +1,7 @@
 import sys
 from PyQt5.QtWidgets import QApplication
-
+from dotenv import load_dotenv
+load_dotenv()
 # Import View
 from src.UI.login import LoginScreen
 from src.UI.main_window import MainWindow

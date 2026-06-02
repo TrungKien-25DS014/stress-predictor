@@ -16,7 +16,7 @@ from __future__ import annotations
 from PyQt5.QtWidgets import (
     QLineEdit, QPushButton, QWidget, QSlider,
     QGraphicsDropShadowEffect, QLabel, QVBoxLayout, QHBoxLayout,
-    QFrame, QSizePolicy, QLayout, QSpacerItem,
+    QFrame, QRadioButton, QButtonGroup, QTabWidget, QStackedWidget, QSizePolicy,
 )
 from PyQt5.QtCore import Qt, QRectF, QPropertyAnimation, QEasingCurve
 from PyQt5.QtGui import (
@@ -737,7 +737,6 @@ class StyledSlider(QWidget):
 
     def setValue(self, v: int):
         self._slider.setValue(v)
-
 class MetricCard(QFrame):
     """Card hiển thị một chỉ số đơn lẻ với accent bar màu ở đỉnh."""
 
@@ -809,3 +808,83 @@ class MetricCard(QFrame):
         value_font.setWeight(QFont.Bold)
         self._value_label.setFont(value_font)
         self._value_label.setStyleSheet("color: #1A1D2E;")
+from PyQt5.QtWidgets import QMessageBox
+
+# ===========================================================================
+# 8. CustomMessageBox (Hộp thoại thông báo đồng bộ phong cách)
+# ===========================================================================
+class CustomMessageBox(QMessageBox):
+    """
+    Hộp thoại thông báo tuỳ biến đồng bộ với theme Clinical Light.
+    
+    Cung cấp 3 static methods gọi nhanh:
+      - CustomMessageBox.show_success(parent, title, text)
+      - CustomMessageBox.show_warning(parent, title, text)
+      - CustomMessageBox.show_error(parent, title, text)
+    """
+    def __init__(self, msg_type: str, title: str, text: str, parent: QWidget | None = None):
+        super().__init__(parent)
+        self.setWindowTitle(title)
+        self.setText(text)
+        
+        # Cấu hình màu sắc nút bấm dựa theo loại thông báo
+        btn_bg = _ACCENT
+        btn_hover = _ACCENT_HOVER
+        
+        if msg_type == "success":
+            self.setIcon(QMessageBox.Information)
+            btn_bg = "#28A745"       # Xanh lá
+            btn_hover = "#218838"
+        elif msg_type == "warning":
+            self.setIcon(QMessageBox.Warning)
+            btn_bg = "#FFC107"       # Vàng
+            btn_hover = "#E0A800"
+        elif msg_type == "error":
+            self.setIcon(QMessageBox.Critical)
+            btn_bg = "#DC3545"       # Đỏ
+            btn_hover = "#C82333"
+
+        # Apply QSS (CSS cho PyQt)
+        self.setStyleSheet(f"""
+            QMessageBox {{
+                background-color: {_WHITE};
+                border: 1px solid {_BORDER_IDLE};
+            }}
+            QLabel {{
+                color: {_TEXT_DARK};
+                font-family: 'Segoe UI';
+                font-size: 10pt;
+            }}
+            QPushButton {{
+                background-color: {btn_bg};
+                color: {_WHITE};
+                border: none;
+                border-radius: 6px;
+                padding: 6px 18px;
+                font-family: 'Segoe UI Semibold';
+                font-size: 10pt;
+                min-width: 80px;
+                min-height: 20px;
+            }}
+            QPushButton:hover {{
+                background-color: {btn_hover};
+            }}
+            QPushButton:pressed {{
+                padding-top: 2px;
+            }}
+        """)
+
+    @staticmethod
+    def show_success(parent, title: str, text: str):
+        msg = CustomMessageBox("success", title, text, parent)
+        msg.exec_()
+
+    @staticmethod
+    def show_warning(parent, title: str, text: str):
+        msg = CustomMessageBox("warning", title, text, parent)
+        msg.exec_()
+
+    @staticmethod
+    def show_error(parent, title: str, text: str):
+        msg = CustomMessageBox("error", title, text, parent)
+        msg.exec_()

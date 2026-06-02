@@ -3,15 +3,14 @@ import smtplib
 import random
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
-from PyQt5.QtWidgets import QMessageBox
+from src.UI.components.custom_widgets import CustomMessageBox
 
 class AuthController:
     def __init__(self, login_view, auth_model, app_navigator):
         self.view = login_view
         self.model = auth_model
-        self.app_navigator = app_navigator # Callback để chuyển sang MainWindow
+        self.app_navigator = app_navigator
         
-        # Lưu tạm OTP trong RAM: { "email": "123456" }
         self.otp_storage = {}
         
         self.SMTP_EMAIL = os.getenv("SMTP_EMAIL") 
@@ -37,27 +36,27 @@ class AuthController:
     def handle_register(self, data):
         # Validate cơ bản
         if data['password'] != data['confirm_password']:
-            QMessageBox.warning(self.view, "Lỗi", "Mật khẩu xác nhận không khớp!")
+            CustomMessageBox.show_warning(self.view, "Lỗi", "Mật khẩu xác nhận không khớp!")
             return
             
         if len(data['password']) < 6:
-            QMessageBox.warning(self.view, "Lỗi", "Mật khẩu phải có ít nhất 6 ký tự.")
+            CustomMessageBox.show_warning(self.view, "Lỗi", "Mật khẩu phải có ít nhất 6 ký tự.")
             return
             
         if not data['email'] or not data['full_name']:
-            QMessageBox.warning(self.view, "Lỗi", "Vui lòng nhập đủ Email và Họ tên.")
+            CustomMessageBox.show_warning(self.view, "Lỗi", "Vui lòng nhập đủ Email và Họ tên.")
             return
 
         success, msg = self.model.register(data)
         if success:
-            QMessageBox.information(self.view, "Thành công", msg)
+            CustomMessageBox.show_success(self.view, "Thành công", msg)
             self.view._stack.setCurrentIndex(0) # Quay về form login
         else:
-            QMessageBox.warning(self.view, "Lỗi đăng ký", msg)
+            CustomMessageBox.show_error(self.view, "Lỗi đăng ký", msg)
 
     def handle_send_otp(self, email):
         if not self.model.check_email_exists(email):
-            QMessageBox.warning(self.view, "Lỗi", "Email này không tồn tại trong hệ thống!")
+            CustomMessageBox.show_error(self.view, "Lỗi", "Email này không tồn tại trong hệ thống!")
             return
             
         # Tạo mã 6 số ngẫu nhiên
@@ -79,30 +78,29 @@ class AuthController:
             server.login(self.SMTP_EMAIL, self.SMTP_PASSWORD)
             server.send_message(msg)
             server.quit()
-            
-            QMessageBox.information(self.view, "Thành công", f"Đã gửi mã OTP đến {email}!\nVui lòng kiểm tra hộp thư.")
+            CustomMessageBox.show_success(self.view, "Thành công", f"Đã gửi mã OTP đến {email}!\nVui lòng kiểm tra hộp thư.")
         except Exception as e:
             print(f"[SMTP Error]: {e}")
-            QMessageBox.critical(self.view, "Lỗi", "Không thể gửi email lúc này. Vui lòng kiểm tra lại kết nối mạng.")
+            CustomMessageBox.show_error(self.view, "Lỗi", "Không thể gửi email lúc này. Vui lòng kiểm tra lại kết nối mạng.")
 
     # Sửa lại định nghĩa hàm (khoảng dòng 62)
     def handle_update_pwd(self, email, otp, new_pwd, conf_pwd):
-      if email not in self.otp_storage or self.otp_storage[email] != otp:
-        QMessageBox.warning(self.view, "Lỗi", "Mã OTP không hợp lệ hoặc đã hết hạn!")
-        return
-        
-    # BỔ SUNG KIỂM TRA TRÙNG KHỚP
-      if new_pwd != conf_pwd:
-        QMessageBox.warning(self.view, "Lỗi", "Mật khẩu xác nhận không khớp!")
-        return
-        
-      if len(new_pwd) < 6:
-        QMessageBox.warning(self.view, "Lỗi", "Mật khẩu mới phải có ít nhất 6 ký tự.")
-        return
-        
-      if self.model.update_password(email, new_pwd):
-        QMessageBox.information(self.view, "Thành công", "Đổi mật khẩu thành công! Hãy đăng nhập lại.")
-        del self.otp_storage[email] 
-        self.view._stack.setCurrentIndex(0) 
-      else:
-        QMessageBox.warning(self.view, "Lỗi", "Có lỗi xảy ra, vui lòng thử lại sau.")
+        if email not in self.otp_storage or self.otp_storage[email] != otp:
+            CustomMessageBox.show_warning(self.view, "Lỗi", "Mã OTP không hợp lệ hoặc đã hết hạn!")
+            return
+            
+        # BỔ SUNG KIỂM TRA TRÙNG KHỚP
+        if new_pwd != conf_pwd:
+            CustomMessageBox.show_warning(self.view, "Lỗi", "Mật khẩu xác nhận không khớp!")
+            return
+            
+        if len(new_pwd) < 6:
+            CustomMessageBox.show_warning(self.view, "Lỗi", "Mật khẩu mới phải có ít nhất 6 ký tự.")
+            return
+            
+        if self.model.update_password(email, new_pwd):
+            CustomMessageBox.show_success(self.view, "Thành công", "Đổi mật khẩu thành công! Hãy đăng nhập lại.")
+            del self.otp_storage[email] 
+            self.view._stack.setCurrentIndex(0) 
+        else:
+            CustomMessageBox.show_error(self.view, "Lỗi", "Có lỗi xảy ra, vui lòng thử lại sau.")   
