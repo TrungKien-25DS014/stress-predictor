@@ -1,0 +1,13 @@
+[33me1412a1[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mKien[m[33m, [m[1;31morigin/Kien[m[33m)[m HEAD@{0}: reset: moving to HEAD
+[33me1412a1[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mKien[m[33m, [m[1;31morigin/Kien[m[33m)[m HEAD@{1}: reset: moving to HEAD
+[33me1412a1[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mKien[m[33m, [m[1;31morigin/Kien[m[33m)[m HEAD@{2}: commit: kien
+[33m598fa11[m HEAD@{3}: commit (merge): Cập nhật cấu trúc thư mục UI, Controller và Model
+[33mdf2021e[m[33m ([m[1;32mmain[m[33m)[m HEAD@{4}: pull origin main: Fast-forward
+[33m518f843[m HEAD@{5}: checkout: moving from main to Kien
+[33mdf2021e[m[33m ([m[1;32mmain[m[33m)[m HEAD@{6}: commit: Kien 1/6
+[33m087c2e0[m HEAD@{7}: pull origin Bao: Merge made by the 'ort' strategy.
+[33m5faa31b[m HEAD@{8}: commit: kien
+[33mce53e29[m HEAD@{9}: pull origin Bao: Fast-forward
+[33m518f843[m HEAD@{10}: pull origin Bao: Fast-forward
+[33mf7bf1cf[m HEAD@{11}: Branch: renamed refs/heads/master to refs/heads/main
+[33mf7bf1cf[m HEAD@{13}: commit (initial): first commit
