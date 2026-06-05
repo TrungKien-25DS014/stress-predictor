@@ -511,12 +511,12 @@ class QuestionCard(QFrame):
         shadow.setBlurRadius(14)
         shadow.setOffset(0, 2)
         self.setGraphicsEffect(shadow)
-        self.setStyleSheet("""
-            QFrame#q_card {
-                background: white;
-                border: 1px solid #DEE2E6;
+        self.setStyleSheet(f"""
+            QFrame#q_card {{
+                background: {C['white']};
+                border: 1px solid {C['card_border']};
                 border-radius: 12px;
-            }
+            }}
         """)
 
 # SurveyScreen

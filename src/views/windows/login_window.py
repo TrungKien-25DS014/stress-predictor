@@ -16,25 +16,25 @@ from PyQt5.QtGui import QFont, QColor, QPainter, QLinearGradient, QPen
 from src.views.components.widgets import GlowLineEdit, GoldButton
 from src.core.config import C
 
-# Style chung cho nút Vàng Ánh Kim (Metallic Gold Gradient)
-GOLD_BTN_STYLE = """
-    QPushButton {
+# Style chung cho nút Vàng Ánh Kim (Metallic Gold Gradient) - Lấy từ config
+GOLD_BTN_STYLE = f"""
+    QPushButton {{
         background: qlineargradient(x1:0, y1:0, x2:1, y2:0, 
-                                    stop:0 #C89B3C, stop:0.5 #F7DA83, stop:1 #C89B3C);
-        color: #1A2233;
+                                    stop:0 {C['btn_gold_edge']}, stop:0.5 {C['btn_gold_mid']}, stop:1 {C['btn_gold_edge']});
+        color: {C['text_primary']};
         border-radius: 16px; 
         font-weight: bold;
         font-size: 15px;
-        border: 1px solid #B8862D;
-    }
-    QPushButton:hover {
+        border: 1px solid {C['btn_gold_border']};
+    }}
+    QPushButton:hover {{
         background: qlineargradient(x1:0, y1:0, x2:1, y2:0, 
-                                    stop:0 #D9AF4E, stop:0.5 #FCE69C, stop:1 #D9AF4E);
-    }
-    QPushButton:pressed {
+                                    stop:0 {C['btn_gold_h_edge']}, stop:0.5 {C['btn_gold_h_mid']}, stop:1 {C['btn_gold_h_edge']});
+    }}
+    QPushButton:pressed {{
         background: qlineargradient(x1:0, y1:0, x2:1, y2:0, 
-                                    stop:0 #B08226, stop:0.5 #E0C161, stop:1 #B08226);
-    }
+                                    stop:0 {C['btn_gold_p_edge']}, stop:0.5 {C['btn_gold_p_mid']}, stop:1 {C['btn_gold_p_edge']});
+    }}
 """
 
 # =====================================================================
@@ -375,7 +375,6 @@ class RegisterPanel(QWidget):
         card_layout.addWidget(self.email_input)
         
         pwd_container = QWidget()
-        # FIX: Dùng class selector (.QWidget) để thuộc tính không bị kế thừa xuống QLineEdit
         pwd_container.setStyleSheet(".QWidget { background: transparent; }")
         pwd_row = QHBoxLayout(pwd_container)
         pwd_row.setContentsMargins(0, 0, 0, 0)
@@ -405,7 +404,6 @@ class RegisterPanel(QWidget):
         card_layout.addWidget(self.name_input)
         
         details_container = QWidget()
-        # FIX: Dùng class selector (.QWidget)
         details_container.setStyleSheet(".QWidget { background: transparent; }")
         details_row = QHBoxLayout(details_container)
         details_row.setContentsMargins(0, 0, 0, 0)
@@ -502,7 +500,6 @@ class ForgotPasswordPanel(QWidget):
         card_layout.addWidget(self._make_section_header("1", "EMAIL TÀI KHOẢN"))
         
         email_container = QWidget()
-        # FIX: Dùng class selector (.QWidget)
         email_container.setStyleSheet(".QWidget { background: transparent; }")
         email_row = QHBoxLayout(email_container)
         email_row.setContentsMargins(0, 0, 0, 0)
@@ -530,7 +527,6 @@ class ForgotPasswordPanel(QWidget):
         card_layout.addWidget(self._make_section_header("3", "MẬT KHẨU MỚI"))
         
         pwd_container = QWidget()
-        # FIX: Dùng class selector (.QWidget)
         pwd_container.setStyleSheet(".QWidget { background: transparent; }")
         pwd_row = QHBoxLayout(pwd_container)
         pwd_row.setContentsMargins(0, 0, 0, 0)

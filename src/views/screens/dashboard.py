@@ -14,20 +14,17 @@ from PyQt5.QtGui import QFont, QColor, QBrush
 
 from src.views.components.widgets import MetricCard
 from src.views.components.charts import CanvasChart
+from src.core.config import C  # Import config màu
 
-
-# ============================================================================
-# DashboardScreen
-# ============================================================================
 class DashboardScreen(QWidget):
 
-    _CARD_ACCENTS: list[str] = ["#4A90D9", "#7B61FF", "#F59E0B", "#EF4444"]
+    _CARD_ACCENTS: list[str] = [C["chart_blue"], C["chart_purple"], C["chart_amber"], C["chart_red"]]
 
     _STRESS_LEVELS: dict[tuple[int, int], tuple[str, str]] = {
-        (0,  40):  ("Thấp",       "#22C55E"),
-        (40, 65):  ("Trung bình", "#F59E0B"),
-        (65, 85):  ("Cao",        "#EF4444"),
-        (85, 101): ("Rất cao",    "#9B1C1C"),
+        (0,  40):  ("Thấp",       C["chart_green"]),
+        (40, 65):  ("Trung bình", C["chart_amber"]),
+        (65, 85):  ("Cao",        C["chart_red"]),
+        (85, 101): ("Rất cao",    C["chart_darkred"]),
     }
 
     _HEALTH_TIPS: list[str] = [
@@ -71,28 +68,7 @@ class DashboardScreen(QWidget):
         chart_data: dict[str, list],
         history_list: list[dict[str, Any]],
     ) -> None:
-        """
-        Cập nhật toàn bộ dashboard từ dữ liệu database – một lần gọi duy nhất.
-
-        Args:
-            summary_dict:
-                {
-                    "total_tests":   int,
-                    "monthly_tests": int,
-                    "avg_stress":    float,   # 0–100
-                    "latest_stress": float,
-                }
-            chart_data:
-                {
-                    "dates":  list[datetime.date | datetime.datetime],
-                    "scores": list[float],    # 0–100
-                }
-            history_list:  list of
-                {
-                    "datetime": str,    # "2024-05-20 14:32"
-                    "score":    float,
-                }
-        """
+        """Cập nhật toàn bộ dashboard từ dữ liệu database – một lần gọi duy nhất."""
         self.update_metrics(
             total_tests   = summary_dict.get("total_tests",   0),
             monthly_tests = summary_dict.get("monthly_tests", 0),
@@ -150,7 +126,6 @@ class DashboardScreen(QWidget):
             row.addWidget(card)
             cards.append(card)
 
-        # Giữ tham chiếu để update_metrics() có thể gọi set_value()
         self._card_total, self._card_monthly, \
             self._card_avg, self._card_latest = cards
         return wrap
@@ -168,7 +143,6 @@ class DashboardScreen(QWidget):
         return panel
 
     def _build_chart_side(self) -> QWidget:
-        """Trái: tiêu đề + CanvasChart (tái sử dụng từ canvas_chart.py)."""
         box = QWidget()
         box.setObjectName("ChartBox")
         vbox = QVBoxLayout(box)
@@ -179,7 +153,7 @@ class DashboardScreen(QWidget):
         lbl.setObjectName("SectionTitle")
         vbox.addWidget(lbl)
 
-        self._chart = CanvasChart()     # ← tái sử dụng CanvasChart
+        self._chart = CanvasChart()
         vbox.addWidget(self._chart)
         return box
 
@@ -208,15 +182,15 @@ class DashboardScreen(QWidget):
         tbl.setEditTriggers(QAbstractItemView.NoEditTriggers)
         tbl.setSelectionBehavior(QAbstractItemView.SelectRows)
         tbl.setSelectionMode(QAbstractItemView.SingleSelection)
-        tbl.setShowGrid(False)                   # ← bảng phẳng, ẩn gridlines
+        tbl.setShowGrid(False)
         tbl.setAlternatingRowColors(True)
-        tbl.verticalHeader().setVisible(False)   # ẩn cột số thứ tự
+        tbl.verticalHeader().setVisible(False)
         tbl.setFocusPolicy(Qt.NoFocus)
 
         hh = tbl.horizontalHeader()
-        hh.setSectionResizeMode(0, QHeaderView.Stretch)           # Ngày/Giờ
-        hh.setSectionResizeMode(1, QHeaderView.ResizeToContents)  # Điểm số
-        hh.setSectionResizeMode(2, QHeaderView.ResizeToContents)  # Đánh giá
+        hh.setSectionResizeMode(0, QHeaderView.Stretch)
+        hh.setSectionResizeMode(1, QHeaderView.ResizeToContents)
+        hh.setSectionResizeMode(2, QHeaderView.ResizeToContents)
         hh.setHighlightSections(False)
         tbl.verticalHeader().setDefaultSectionSize(40)
         return tbl
@@ -225,7 +199,6 @@ class DashboardScreen(QWidget):
     # PRIVATE – DATA POPULATION
     # =========================================================================
     def _populate_history_table(self, history_list: list[dict[str, Any]]) -> None:
-        """Xoá rồi điền lại toàn bộ bảng nhật ký."""
         self._history_table.setRowCount(0)
 
         for i, rec in enumerate(history_list):
@@ -252,71 +225,70 @@ class DashboardScreen(QWidget):
     # PRIVATE – HELPERS
     # =========================================================================
     def _stress_level(self, score: float) -> tuple[str, str]:
-        """Trả về (nhãn, màu hex) tương ứng với mức điểm stress."""
         for (lo, hi), (label, color) in self._STRESS_LEVELS.items():
             if lo <= score < hi:
                 return label, color
-        return "Không xác định", "#9CA3AF"
+        return "Không xác định", C["text_muted"]
 
     # =========================================================================
     # STYLESHEET TOÀN CỤC
     # =========================================================================
     def _apply_style(self) -> None:
-        self.setStyleSheet("""
-            DashboardScreen { background-color: #F3F6FB; }
+        self.setStyleSheet(f"""
+            DashboardScreen {{ background-color: {C['dash_bg']}; }}
 
-            QLabel#PageTitle {
-                color: #1A1D2E;
-            }
+            QLabel#PageTitle {{
+                color: {C['text_primary']};
+            }}
 
-            QFrame#SectionPanel {
-                background-color : #FFFFFF;
+            QFrame#SectionPanel {{
+                background-color : {C['white']};
                 border-radius    : 12px;
-                border           : 1px solid #E8EDF2;
-            }
+                border           : 1px solid {C['divider']};
+            }}
 
-            QLabel#SectionTitle {
-                color       : #374151;
+            QLabel#SectionTitle {{
+                color       : {C['text_primary']};
                 font-family : "Segoe UI";
                 font-size   : 13px;
                 font-weight : 600;
-            }
+            }}
 
-            QLabel#TipLabel {
-                background-color : #EFF6FF;
-                border-left      : 3px solid #4A90D9;
+            QLabel#TipLabel {{
+                background-color : {C['accent_light']};
+                border-left      : 3px solid {C['accent']};
                 border-radius    : 6px;
                 padding          : 10px 12px;
-                color            : #1E40AF;
+                color            : {C['accent_dark']};
                 font-family      : "Segoe UI";
                 font-size        : 12px;
-            }
+            }}
 
-            QTableWidget#HistoryTable {
-                background-color           : #FFFFFF;
-                alternate-background-color : #F8FAFC;
+            QTableWidget#HistoryTable {{
+                background-color           : {C['white']};
+                alternate-background-color : {C['table_alt']};
                 border      : none;
                 outline     : none;
                 font-family : "Segoe UI";
                 font-size   : 12px;
-                color       : #374151;
-            }
-            QTableWidget#HistoryTable::item          { padding:0 12px; border:none; }
-            QTableWidget#HistoryTable::item:selected { background:#EFF6FF; color:#1A1D2E; }
+                color       : {C['text_primary']};
+            }}
+            QTableWidget#HistoryTable::item          {{ padding:0 12px; border:none; }}
+            QTableWidget#HistoryTable::item:selected {{ background:{C['accent_light']}; color:{C['text_primary']}; }}
 
-            QHeaderView::section {
-                background-color : #F8FAFC;
-                color            : #6B7280;
+            QHeaderView::section {{
+                background-color : {C['table_alt']};
+                color            : {C['text_muted']};
                 font-family      : "Segoe UI";
                 font-size        : 11px;
                 font-weight      : 600;
                 padding          : 8px 12px;
                 border           : none;
-                border-bottom    : 2px solid #E8EDF2;
-            }
+                border-bottom    : 2px solid {C['divider']};
+            }}
 
-            QScrollBar:vertical           { background:transparent; width:6px; margin:0; }
-            QScrollBar::handle:vertical   { background:#D1D9E6; border-radius:3px; min-height:20px; }
+            QScrollBar:vertical           {{ background:transparent; width:6px; margin:0; }}
+            QScrollBar::handle:vertical   {{ background:{C['scroll_handle']}; border-radius:3px; min-height:20px; }}
             QScrollBar::add-line:vertical,
-            QScrollBar::sub-line:vertical { height:0; }
+            QScrollBar::sub-line:vertical {{ height:0; }}
         """)

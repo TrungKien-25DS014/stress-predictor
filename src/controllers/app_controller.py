@@ -5,19 +5,21 @@ import glob
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 
-from PyQt5.QtWidgets import QMessageBox
-
 # Import Views
 from src.views.windows.main_window import MainWindow
 from src.views.windows.login_window import LoginScreen
 from src.views.windows.result_dialog import ResultDialog, _FEATURE_ORDER
 from src.views.components.widgets import CustomMessageBox
 
-# Import Models & Controllers
+# Import Models
 from src.models.stress_model import StressModel
 from src.models.auth_model import AuthModel
 from src.models.history_model import HistoryModel
+from src.models.setting_model import SettingModel
+
+# Import Controllers phụ
 from src.controllers.history_controller import HistoryController
+from src.controllers.setting_controller import SettingController
 
 class MainApplicationController:
     def __init__(self):
@@ -29,6 +31,7 @@ class MainApplicationController:
         self.stress_model = StressModel(model_path=model_filepath)
         self.auth_model = AuthModel()
         self.history_model = HistoryModel()
+        self.setting_model = SettingModel()
 
         self.current_user_id = None
         self.current_user_name = ""
@@ -37,17 +40,25 @@ class MainApplicationController:
         self.login_window = LoginScreen()
         self.main_window = MainWindow()
 
-        # 3. Khởi tạo Controller cho Lịch Sử
+        # 3. Khởi tạo Controllers phụ
         self.history_controller = HistoryController(
             model=self.history_model,
             view=self.main_window.get_screen("history")
         )
         self.history_controller.on_data_changed_callback = self.refresh_dashboard_data
 
+        self.setting_controller = SettingController(
+            model=self.setting_model,
+            view=self.main_window.get_screen("settings")
+        )
+
         # 4. Kết nối sự kiện
         self._connect_auth_signals()
         self._connect_app_signals()
 
+    # =========================================================================
+    # LUỒNG XÁC THỰC (LOGIN / REGISTER / FORGOT PASSWORD)
+    # =========================================================================
     def _connect_auth_signals(self):
         self.login_window.login_requested.connect(self.handle_login)
         self.login_window.register_requested.connect(self.handle_register)
@@ -63,28 +74,34 @@ class MainApplicationController:
             self.current_user_id = user["id"]
             self.current_user_name = user["full_name"]
             
+            # Cập nhật UI Main Window
             self.main_window.set_user(self.current_user_name)
             
-            # Đồng bộ User ID cho Lịch sử NGAY LẬP TỨC khi đăng nhập
+            # Đồng bộ User ID cho các module khác ngay lập tức
             self.history_controller.set_current_user(self.current_user_id)
+            self.setting_controller.set_current_user(self.current_user_id)
+            
             self.refresh_dashboard_data()
 
             self.login_window.hide()
             self.main_window.show()
         else:
-            QMessageBox.warning(self.login_window, "Thất bại", "Email hoặc mật khẩu không chính xác.")
+            CustomMessageBox.show_error(self.login_window, "Thất bại", "Email hoặc mật khẩu không chính xác.")
 
     def handle_register(self, data: dict):
         if data['password'] != data['confirm_password']:
-            QMessageBox.warning(self.login_window, "Lỗi", "Mật khẩu xác nhận không khớp.")
+            CustomMessageBox.show_warning(self.login_window, "Lỗi", "Mật khẩu xác nhận không khớp.")
+            return
+        if len(data['password']) < 6:
+            CustomMessageBox.show_warning(self.login_window, "Lỗi", "Mật khẩu phải có ít nhất 6 ký tự.")
             return
 
         success, msg = self.auth_model.register(data)
         if success:
-            QMessageBox.information(self.login_window, "Thành công", msg)
-            self.login_window._stack.setCurrentIndex(0)
+            CustomMessageBox.show_success(self.login_window, "Thành công", msg)
+            self.login_window._stack.setCurrentIndex(0) # Quay lại màn hình đăng nhập
         else:
-            QMessageBox.warning(self.login_window, "Lỗi", msg)
+            CustomMessageBox.show_error(self.login_window, "Lỗi", msg)
 
     def handle_send_otp(self, email):
         if not self.auth_model.check_email_exists(email):
@@ -116,7 +133,7 @@ class MainApplicationController:
             CustomMessageBox.show_success(self.login_window, "Thành công", f"Đã gửi mã OTP đến {email}!")
         except Exception as e:
             print(f"Lỗi SMTP: {e}")
-            CustomMessageBox.show_error(self.login_window, "Lỗi", "Không thể gửi email lúc này. Vui lòng kiểm tra cấu hình.")
+            CustomMessageBox.show_error(self.login_window, "Lỗi", "Không thể gửi email lúc này. Vui lòng kiểm tra cấu hình SMTP.")
 
     def handle_update_pwd(self, email, otp, pwd, conf_pwd):
         email = email.strip()
@@ -139,16 +156,18 @@ class MainApplicationController:
         if success:
             CustomMessageBox.show_success(self.login_window, "Thành công", "Đổi mật khẩu thành công! Hãy đăng nhập lại.")
             del self.otp_storage[email] 
-            self.login_window._stack.setCurrentIndex(0)
+            self.login_window._stack.setCurrentIndex(0) # Quay lại màn hình đăng nhập
         else:
             CustomMessageBox.show_error(self.login_window, "Lỗi", "Hệ thống lỗi khi lưu mật khẩu mới.")
 
+    # =========================================================================
+    # LUỒNG ỨNG DỤNG CHÍNH (SURVEY / DASHBOARD)
+    # =========================================================================
     def _connect_app_signals(self):
         survey_screen = self.main_window.get_screen("survey")
         if survey_screen:
             survey_screen.survey_submitted.connect(self.handle_survey_submission)
 
-        # ĐÃ SỬA LỖI RACE CONDITION TẠI ĐÂY: Lắng nghe sự kiện chuyển trang thực sự thay vì nút bấm
         self.main_window.stack.currentChanged.connect(self.handle_tab_changed)
 
     def handle_tab_changed(self, current_idx):
@@ -185,14 +204,15 @@ class MainApplicationController:
             self.history_controller.refresh_history_view()
         except Exception as e:
             print(f"Lỗi khi xử lý khảo sát: {e}")
+            CustomMessageBox.show_error(self.main_window, "Lỗi", "Đã xảy ra lỗi khi lưu kết quả khảo sát.")
 
     def show_result_dialog(self, level: int, feature_list: list):
         dialog = ResultDialog(level=level, payload=feature_list, parent=self.main_window)
         action = dialog.exec_()
         
-        if action == ResultDialog.Rejected:
+        if action == ResultDialog.Rejected: # Bấm nút "Khảo sát lại"
             survey_screen = self.main_window.get_screen("survey")
             if survey_screen: 
                 survey_screen.reset()
-        elif action == ResultDialog.Accepted:
-            self.main_window._navigate_to(0)
+        elif action == ResultDialog.Accepted: # Bấm nút "Hoàn tất"
+            self.main_window._navigate_to(0) # Chuyển về Dashboard

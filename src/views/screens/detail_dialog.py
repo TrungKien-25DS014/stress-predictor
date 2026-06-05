@@ -1,27 +1,3 @@
-"""
-src/views/screens/detail_dialog.py
-------------------------------------
-Dialog báo cáo chi tiết cho một lần đánh giá stress.
-
-Được tách ra từ history.py để dễ bảo trì và tái sử dụng.
-
-Exports công khai:
-    DetailDialog   — QDialog hiển thị báo cáo (frameless, draggable)
-
-Dữ liệu cần truyền vào (1 dict record):
-    {
-        "id":            int,
-        "datetime":      str,       # "HH:MM - DD/MM/YYYY"
-        "anxiety_level": int,       # 0–21
-        "sleep_hours":   float,
-        "score":         float,     # 0–100
-        "level":         str,       # "Thấp" | "Bình thường" | "Cao"
-        "factors":       list[float],  # 5 giá trị cho donut chart
-    }
-
-Author : Senior PyQt5 Engineer
-"""
-
 from __future__ import annotations
 
 from typing import Any, Optional
@@ -33,29 +9,22 @@ from PyQt5.QtWidgets import (
     QPushButton, QSizePolicy, QVBoxLayout, QWidget,
 )
 
-# ---------------------------------------------------------------------------
-# Import nội bộ (với fallback để chạy độc lập)
-# ---------------------------------------------------------------------------
-try:
-    from src.core.config import COLORS
-except ImportError:
-    COLORS = {
-        "divider": "#E2E8F0",
-    }
+# Sử dụng config chung
+from src.core.config import C
 
 # ---------------------------------------------------------------------------
 # Constants
 # ---------------------------------------------------------------------------
 _FONT = "Segoe UI"
 
-# Config hiển thị theo từng mức đánh giá
+# Config hiển thị theo từng mức đánh giá (dùng màu từ config)
 DETAIL_CONFIG: dict[str, dict] = {
     "Thấp": {
-        "gradient_a": "#1DB954",
-        "gradient_b": "#0A8D3F",
-        "ring_color": "#1DB954",
-        "tag_bg":     "#E6F9EE",
-        "tag_text":   "#0A6B2E",
+        "gradient_a": C["detail_low_a"],
+        "gradient_b": C["detail_low_b"],
+        "ring_color": C["detail_low_a"],
+        "tag_bg":     C["detail_low_bg"],
+        "tag_text":   C["detail_low_txt"],
         "bar_pct":    20,
         "emoji":      "😌",
         "sublabel":   "Mức độ stress của bạn nằm trong ngưỡng kiểm soát tốt",
@@ -69,12 +38,12 @@ DETAIL_CONFIG: dict[str, dict] = {
         "label":       "Trung bình",
         "sublabel":    "Bạn đang chịu một mức áp lực đáng chú ý",
         "emoji":       "😐",
-        "gradient_a":  "#F59E0B",
-        "gradient_b":  "#D97706",
-        "glow":        "#F59E0B55",
-        "ring_color":  "#F59E0B",
-        "tag_bg":      "#FFFBEA",
-        "tag_text":    "#7D5C00",
+        "gradient_a":  C["detail_mid_a"],
+        "gradient_b":  C["detail_mid_b"],
+        "glow":        "#F59E0B55", # Có thể giữ alpha cứng hoặc định nghĩa thêm
+        "ring_color":  C["detail_mid_a"],
+        "tag_bg":      C["detail_mid_bg"],
+        "tag_text":    C["detail_mid_txt"],
         "bar_pct":     58,
         "tips": [
             "🌬️ Thực hành hít thở sâu 4-7-8 mỗi buổi sáng",
@@ -84,11 +53,11 @@ DETAIL_CONFIG: dict[str, dict] = {
         ],
     },
     "Cao": {
-        "gradient_a": "#EF4444",
-        "gradient_b": "#B91C1C",
-        "ring_color": "#EF4444",
-        "tag_bg":     "#FEE2E2",
-        "tag_text":   "#7F1D1D",
+        "gradient_a": C["detail_high_a"],
+        "gradient_b": C["detail_high_b"],
+        "ring_color": C["detail_high_a"],
+        "tag_bg":     C["detail_high_bg"],
+        "tag_text":   C["detail_high_txt"],
         "bar_pct":    85,
         "emoji":      "😰",
         "sublabel":   "Mức stress của bạn cần được quan tâm nghiêm túc",
@@ -104,18 +73,18 @@ DETAIL_CONFIG: dict[str, dict] = {
 
 # 5 nhóm yếu tố cho donut chart
 FACTOR_GROUPS: list[dict] = [
-    {"name": "Tâm lý",     "color": "#8B5CF6"},
-    {"name": "Thể chất",   "color": "#EF4444"},
-    {"name": "Môi trường", "color": "#06B6D4"},
-    {"name": "Học tập",    "color": "#F59E0B"},
-    {"name": "Xã hội",     "color": "#10B981"},
+    {"name": "Tâm lý",     "color": C["factor_psy"]},
+    {"name": "Thể chất",   "color": C["factor_phy"]},
+    {"name": "Môi trường", "color": C["factor_env"]},
+    {"name": "Học tập",    "color": C["factor_edu"]},
+    {"name": "Xã hội",     "color": C["factor_soc"]},
 ]
 
 # 3 mức để vẽ thang đo
 _SCALE_LEVELS = [
-    ("Thấp",        "#16A34A"),
-    ("Bình thường", "#F59E0B"),
-    ("Cao",         "#DC2626"),
+    ("Thấp",        C["detail_low_a"]),
+    ("Bình thường", C["detail_mid_a"]),
+    ("Cao",         C["detail_high_a"]),
 ]
 
 
@@ -123,21 +92,11 @@ _SCALE_LEVELS = [
 # Widget vẽ — ArcRing (vòng cung bán nguyệt)
 # ============================================================================
 class ArcRingWidget(QWidget):
-    """
-    Vòng cung 180° với hiệu ứng đếm lên từ 0 đến target%.
-
-    Params
-    ------
-    color : str   — màu hex cho arc và text (ví dụ "#3B82F6")
-    pct   : int   — phần trăm mục tiêu (0–100)
-    """
-
     def __init__(self, color: str, pct: int, parent: QWidget | None = None) -> None:
         super().__init__(parent)
         self._color   = QColor(color)
         self._target  = max(0, min(100, pct))
         self._current = 0
-        # Reserve 30px dưới cùng cho text %
         self.setMinimumSize(180, 130)
         self.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
 
@@ -145,29 +104,27 @@ class ArcRingWidget(QWidget):
         timer.timeout.connect(self._tick)
         timer.start(16)   # ~60 fps
 
-    # ── Animation ──────────────────────────────────────────────────────────
     def _tick(self) -> None:
         if self._current < self._target:
             self._current = min(self._current + 3, self._target)
             self.update()
 
-    # ── Paint ──────────────────────────────────────────────────────────────
     def paintEvent(self, _) -> None:
         p = QPainter(self)
         p.setRenderHint(QPainter.Antialiasing)
         w, h = self.width(), self.height()
 
-        arc_h = h - 30          # vùng dành cho vòng cung
+        arc_h = h - 30
         side  = min(w, arc_h * 2) - 20
         r     = side // 2
         cx    = w // 2
-        cy    = arc_h           # tâm vòng tròn đầy đủ (chỉ vẽ nửa trên)
+        cy    = arc_h
 
-        # Track (nền xám)
-        p.setPen(QPen(QColor("#E5E7EB"), 12, Qt.SolidLine, Qt.RoundCap))
+        # Track (nền xám dùng divider)
+        p.setPen(QPen(QColor(C['divider']), 12, Qt.SolidLine, Qt.RoundCap))
         p.drawArc(cx - r, cy - r, 2 * r, 2 * r, 0 * 16, 180 * 16)
 
-        # Arc màu (tiến trình)
+        # Arc màu
         sweep = int(self._current / 100 * 180)
         grad  = QLinearGradient(cx - r, cy, cx + r, cy)
         grad.setColorAt(0, self._color.lighter(120))
@@ -175,7 +132,7 @@ class ArcRingWidget(QWidget):
         p.setPen(QPen(grad, 12, Qt.SolidLine, Qt.RoundCap))
         p.drawArc(cx - r, cy - r, 2 * r, 2 * r, 180 * 16, -sweep * 16)
 
-        # Số % bên dưới tâm, trong vùng 30px reserved
+        # Số %
         p.setPen(QPen(self._color))
         p.setFont(QFont(_FONT, 15, QFont.Bold))
         p.drawText(cx - 35, cy + 6, 70, 24, Qt.AlignCenter, f"{self._current}%")
@@ -183,19 +140,9 @@ class ArcRingWidget(QWidget):
 
 
 # ============================================================================
-# Widget vẽ — DonutMini (biểu đồ donut)
+# Widget vẽ — DonutMini
 # ============================================================================
 class DonutMiniWidget(QWidget):
-    """
-    Biểu đồ donut nhỏ gọn, không có animation.
-
-    Params
-    ------
-    sizes  : list[float]  — giá trị từng phần (tự tính tỉ lệ)
-    colors : list[str]    — màu hex tương ứng
-    labels : list[str]    — nhãn (chỉ dùng cho accessibility, không vẽ lên)
-    """
-
     def __init__(
         self,
         sizes: list[float],
@@ -227,27 +174,16 @@ class DonutMiniWidget(QWidget):
             p.drawPie(x, y, side, side, angle, span)
             angle += span
 
-        # Lỗ giữa (hole)
         hole = int(side * 0.52)
-        p.setBrush(QBrush(QColor("#FFFFFF")))
+        p.setBrush(QBrush(QColor(C['white'])))
         p.drawEllipse((w - hole) // 2, (h - hole) // 2, hole, hole)
         p.end()
 
 
 # ============================================================================
-# DetailDialog — Dialog báo cáo chi tiết
+# DetailDialog
 # ============================================================================
 class DetailDialog(QDialog):
-    """
-    Dialog frameless hiển thị báo cáo chi tiết cho 1 lần đánh giá.
-    Có thể kéo để di chuyển. Không có nút Xuất PDF.
-
-    Cách dùng
-    ---------
-        dlg = DetailDialog(record=rec, parent=main_window)
-        dlg.exec_()
-    """
-
     def __init__(
         self,
         record: dict[str, Any],
@@ -266,20 +202,18 @@ class DetailDialog(QDialog):
         self._build_ui()
         self.resize(720, 620)
 
-    # ── Build ───────────────────────────────────────────────────────────────
     def _build_ui(self) -> None:
         outer = QVBoxLayout(self)
         outer.setContentsMargins(20, 20, 20, 20)
 
-        # Outer card (shadow giả bằng border)
         card = QFrame()
         card.setObjectName("detail_card")
-        card.setStyleSheet("""
-            QFrame#detail_card {
-                background    : #FFFFFF;
+        card.setStyleSheet(f"""
+            QFrame#detail_card {{
+                background    : {C['white']};
                 border-radius : 20px;
-                border        : 1.5px solid #D1D5DB;
-            }
+                border        : 1.5px solid {C['card_border']};
+            }}
         """)
         outer.addWidget(card)
 
@@ -300,7 +234,6 @@ class DetailDialog(QDialog):
 
         lay.addWidget(self._make_footer())
 
-    # ── Header ──────────────────────────────────────────────────────────────
     def _make_header(self) -> QWidget:
         cfg = self._cfg
         rec = self._rec
@@ -320,12 +253,9 @@ class DetailDialog(QDialog):
         lay.setContentsMargins(24, 14, 18, 14)
         lay.setSpacing(14)
 
-        # Emoji badge tròn
         badge = QFrame()
         badge.setFixedSize(62, 62)
-        badge.setStyleSheet(
-            "QFrame { background: rgba(255,255,255,0.22); border-radius: 31px; }"
-        )
+        badge.setStyleSheet("QFrame { background: rgba(255,255,255,0.22); border-radius: 31px; }")
         bl = QVBoxLayout(badge)
         bl.setContentsMargins(0, 0, 0, 0)
         el = QLabel(cfg["emoji"])
@@ -334,7 +264,6 @@ class DetailDialog(QDialog):
         el.setStyleSheet("background: transparent; color: white;")
         bl.addWidget(el)
 
-        # Cột text
         txt = QVBoxLayout()
         txt.setSpacing(2)
 
@@ -359,7 +288,6 @@ class DetailDialog(QDialog):
         txt.addWidget(title_lbl)
         txt.addWidget(date_lbl)
 
-        # Nút đóng
         close_btn = QPushButton("✕")
         close_btn.setFixedSize(34, 34)
         close_btn.setCursor(Qt.PointingHandCursor)
@@ -378,13 +306,11 @@ class DetailDialog(QDialog):
         lay.addWidget(close_btn, alignment=Qt.AlignTop)
         return header
 
-    # ── Left column ─────────────────────────────────────────────────────────
     def _make_left_col(self) -> QVBoxLayout:
         cfg = self._cfg
         col = QVBoxLayout()
         col.setSpacing(14)
 
-        # ── Arc ring ────────────────────────────────────────────────────────
         arc_card = self._card()
         ac_lay = QVBoxLayout(arc_card)
         ac_lay.setContentsMargins(18, 14, 18, 10)
@@ -392,7 +318,7 @@ class DetailDialog(QDialog):
 
         arc_title = QLabel("Chỉ số stress tổng thể")
         arc_title.setFont(QFont(_FONT + " Semibold", 9))
-        arc_title.setStyleSheet("color: #6B7280; background: transparent;")
+        arc_title.setStyleSheet(f"color: {C['text_muted']}; background: transparent;")
         arc_title.setAlignment(Qt.AlignCenter)
 
         arc = ArcRingWidget(color=cfg["ring_color"], pct=cfg["bar_pct"])
@@ -402,7 +328,6 @@ class DetailDialog(QDialog):
         ac_lay.addWidget(arc)
         col.addWidget(arc_card)
 
-        # ── Thang đo 3 mức ──────────────────────────────────────────────────
         scale = self._card()
         sc_lay = QVBoxLayout(scale)
         sc_lay.setContentsMargins(16, 12, 16, 12)
@@ -410,7 +335,7 @@ class DetailDialog(QDialog):
 
         sc_title = QLabel("Thang đo 3 mức độ")
         sc_title.setFont(QFont(_FONT + " Semibold", 9))
-        sc_title.setStyleSheet("color: #374151; background: transparent;")
+        sc_title.setStyleSheet(f"color: {C['text_primary']}; background: transparent;")
         sc_lay.addWidget(sc_title)
 
         bar_row = QHBoxLayout()
@@ -424,16 +349,14 @@ class DetailDialog(QDialog):
             seg = QFrame()
             seg.setFixedHeight(8)
             seg.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
-            seg.setStyleSheet(
-                f"background: {color if active else '#E5E7EB'}; border-radius: 4px;"
-            )
+            bg_color = color if active else C['divider']
+            seg.setStyleSheet(f"background: {bg_color}; border-radius: 4px;")
             bar_row.addWidget(seg)
 
             lbl2 = QLabel(f"{'▶ ' if active else ''}{name}")
             lbl2.setFont(QFont(_FONT + (" Semibold" if active else ""), 8))
-            lbl2.setStyleSheet(
-                f"color: {color if active else '#9CA3AF'}; background: transparent;"
-            )
+            text_color = color if active else C['text_muted']
+            lbl2.setStyleSheet(f"color: {text_color}; background: transparent;")
             lbl2.setAlignment(Qt.AlignCenter)
             lbl_row.addWidget(lbl2)
 
@@ -441,11 +364,8 @@ class DetailDialog(QDialog):
         sc_lay.addLayout(lbl_row)
         col.addWidget(scale)
 
-        # ── Gợi ý cải thiện ─────────────────────────────────────────────────
         tips_card = QFrame()
-        tips_card.setStyleSheet(
-            f"QFrame {{ background: {cfg['tag_bg']}; border: none; border-radius: 14px; }}"
-        )
+        tips_card.setStyleSheet(f"QFrame {{ background: {cfg['tag_bg']}; border: none; border-radius: 14px; }}")
         t_lay = QVBoxLayout(tips_card)
         t_lay.setContentsMargins(16, 12, 16, 12)
         t_lay.setSpacing(8)
@@ -457,7 +377,7 @@ class DetailDialog(QDialog):
         ico.setStyleSheet("background: transparent;")
         ttl = QLabel("Gợi ý cải thiện")
         ttl.setFont(QFont(_FONT + " Semibold", 10))
-        ttl.setStyleSheet("color: #374151; background: transparent;")
+        ttl.setStyleSheet(f"color: {C['text_primary']}; background: transparent;")
         h_row.addWidget(ico)
         h_row.addWidget(ttl, 1)
         t_lay.addLayout(h_row)
@@ -466,14 +386,13 @@ class DetailDialog(QDialog):
             tl = QLabel(tip)
             tl.setFont(QFont(_FONT, 9))
             tl.setWordWrap(True)
-            tl.setStyleSheet("color: #4B5563; background: transparent;")
+            tl.setStyleSheet(f"color: {C['text_muted']}; background: transparent;")
             t_lay.addWidget(tl)
 
         t_lay.addStretch()
         col.addWidget(tips_card, 1)
         return col
 
-    # ── Right column ─────────────────────────────────────────────────────────
     def _make_right_col(self) -> QFrame:
         rec  = self._rec
         card = self._card()
@@ -481,13 +400,11 @@ class DetailDialog(QDialog):
         lay.setContentsMargins(16, 14, 16, 14)
         lay.setSpacing(12)
 
-        # Tiêu đề
         rt = QLabel("📊  Phân bổ yếu tố stress")
         rt.setFont(QFont(_FONT + " Semibold", 10))
-        rt.setStyleSheet("color: #374151; background: transparent;")
+        rt.setStyleSheet(f"color: {C['text_primary']}; background: transparent;")
         lay.addWidget(rt)
 
-        # Donut chart
         sizes  = self._factors
         colors = [g["color"] for g in FACTOR_GROUPS]
         labels = [g["name"]  for g in FACTOR_GROUPS]
@@ -495,7 +412,6 @@ class DetailDialog(QDialog):
         donut.setMinimumHeight(160)
         lay.addWidget(donut, 1)
 
-        # Legend
         total = sum(sizes) or 1
         for grp, size in zip(FACTOR_GROUPS, sizes):
             pct = size / total * 100
@@ -509,7 +425,7 @@ class DetailDialog(QDialog):
 
             nm = QLabel(grp["name"])
             nm.setFont(QFont(_FONT, 8))
-            nm.setStyleSheet("color: #4B5563; background: transparent;")
+            nm.setStyleSheet(f"color: {C['text_muted']}; background: transparent;")
 
             pct_lbl = QLabel(f"{pct:.1f}%")
             pct_lbl.setFont(QFont(_FONT + " Semibold", 8))
@@ -519,9 +435,7 @@ class DetailDialog(QDialog):
             mini_bar = QFrame()
             mini_bar.setFixedHeight(4)
             mini_bar.setFixedWidth(max(8, int(pct * 0.8)))
-            mini_bar.setStyleSheet(
-                f"background: {grp['color']}; border-radius: 2px;"
-            )
+            mini_bar.setStyleSheet(f"background: {grp['color']}; border-radius: 2px;")
 
             row.addWidget(dot)
             row.addWidget(nm, 1)
@@ -529,14 +443,12 @@ class DetailDialog(QDialog):
             row.addWidget(pct_lbl)
             lay.addLayout(row)
 
-        # Divider
         div = QFrame()
         div.setFrameShape(QFrame.HLine)
         div.setFixedHeight(1)
-        div.setStyleSheet(f"background: {COLORS['divider']}; border: none;")
+        div.setStyleSheet(f"background: {C['divider']}; border: none;")
         lay.addWidget(div)
 
-        # Thông tin bản ghi
         info_data = [
             ("Điểm stress", str(rec.get("score", "—"))),
             ("Mức lo âu",   f"{rec.get('anxiety_level', '—')} / 21"),
@@ -546,10 +458,10 @@ class DetailDialog(QDialog):
             irow = QHBoxLayout()
             il = QLabel(label)
             il.setFont(QFont(_FONT, 9))
-            il.setStyleSheet("color: #6B7280; background: transparent;")
+            il.setStyleSheet(f"color: {C['text_muted']}; background: transparent;")
             iv = QLabel(value)
             iv.setFont(QFont(_FONT + " Semibold", 9))
-            iv.setStyleSheet("color: #1F2937; background: transparent;")
+            iv.setStyleSheet(f"color: {C['text_primary']}; background: transparent;")
             iv.setAlignment(Qt.AlignRight | Qt.AlignVCenter)
             irow.addWidget(il, 1)
             irow.addWidget(iv)
@@ -557,17 +469,16 @@ class DetailDialog(QDialog):
 
         return card
 
-    # ── Footer ───────────────────────────────────────────────────────────────
     def _make_footer(self) -> QFrame:
         cfg = self._cfg
         footer = QFrame()
-        footer.setStyleSheet("""
-            QFrame {
-                background              : #F9FAFB;
-                border-top              : 1px solid #E5E7EB;
+        footer.setStyleSheet(f"""
+            QFrame {{
+                background              : {C['bg_main']};
+                border-top              : 1px solid {C['divider']};
                 border-bottom-left-radius : 20px;
                 border-bottom-right-radius: 20px;
-            }
+            }}
         """)
         fl = QHBoxLayout(footer)
         fl.setContentsMargins(24, 14, 24, 14)
@@ -581,7 +492,7 @@ class DetailDialog(QDialog):
             QPushButton {{
                 background: qlineargradient(x1:0,y1:0,x2:1,y2:0,
                     stop:0 {cfg['gradient_a']}, stop:1 {cfg['gradient_b']});
-                color: white; border: none; border-radius: 10px;
+                color: {C['white']}; border: none; border-radius: 10px;
             }}
             QPushButton:hover   {{ opacity: 0.9; }}
             QPushButton:pressed {{ background: {cfg['gradient_b']}; }}
@@ -590,17 +501,12 @@ class DetailDialog(QDialog):
         fl.addWidget(close_btn)
         return footer
 
-    # ── Helper ───────────────────────────────────────────────────────────────
     @staticmethod
     def _card() -> QFrame:
-        """Card trắng với border nhẹ và bo góc."""
         c = QFrame()
-        c.setStyleSheet(
-            "QFrame { background: #FFFFFF; border: none; border-radius: 14px; }"
-        )
+        c.setStyleSheet(f"QFrame {{ background: {C['white']}; border: none; border-radius: 14px; }}")
         return c
 
-    # ── Drag to move ─────────────────────────────────────────────────────────
     def mousePressEvent(self, e) -> None:
         if e.button() == Qt.LeftButton:
             self._drag_pos = e.globalPos() - self.frameGeometry().topLeft()
@@ -627,7 +533,7 @@ class DetailDialog(QDialog):
 # ============================================================================
 if __name__ == "__main__":
     import sys
-    from PyQt5.QtWidgets import QApplication, QPushButton, QVBoxLayout, QWidget
+    from PyQt5.QtWidgets import QApplication
 
     app = QApplication(sys.argv)
     app.setStyle("Fusion")
@@ -635,7 +541,7 @@ if __name__ == "__main__":
     win = QWidget()
     win.setWindowTitle("DetailDialog – Preview")
     win.resize(400, 200)
-    win.setStyleSheet("background: #F0F2F5;")
+    win.setStyleSheet(f"background: {C['bg']};")
 
     layout = QVBoxLayout(win)
 

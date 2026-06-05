@@ -1,22 +1,9 @@
-"""
-src/ui/components/custom_widgets.py
-------------------------------------
-Bộ widget tùy biến theo phong cách Clinical Light.
-
-Gồm 3 thành phần:
-  - GlowLineEdit    : Ô nhập liệu có hiệu ứng glow khi focus
-  - GoldButton      : Nút bấm vàng gold với hover + press animation
-  - BackgroundWidget: Widget nền ảnh tự động scale theo cửa sổ
-
-Author : Senior PyQt5 Engineer
-"""
-
 from __future__ import annotations
 
 from PyQt5.QtWidgets import (
     QLineEdit, QPushButton, QWidget, QSlider,
     QGraphicsDropShadowEffect, QLabel, QVBoxLayout, QHBoxLayout,
-    QFrame, QRadioButton, QButtonGroup, QTabWidget, QStackedWidget, QSizePolicy,
+    QFrame, QRadioButton, QButtonGroup, QTabWidget, QStackedWidget, QSizePolicy, QDialog
 )
 from PyQt5.QtCore import Qt, QRectF, QPropertyAnimation, QEasingCurve
 from PyQt5.QtGui import (
@@ -813,67 +800,158 @@ from PyQt5.QtWidgets import QMessageBox
 # ===========================================================================
 # 8. CustomMessageBox (Hộp thoại thông báo đồng bộ phong cách)
 # ===========================================================================
-class CustomMessageBox(QMessageBox):
+class CustomMessageBox(QDialog):
     """
-    Hộp thoại thông báo tuỳ biến đồng bộ với theme Clinical Light.
-    
-    Cung cấp 3 static methods gọi nhanh:
-      - CustomMessageBox.show_success(parent, title, text)
-      - CustomMessageBox.show_warning(parent, title, text)
-      - CustomMessageBox.show_error(parent, title, text)
+    Hộp thoại thông báo tùy biến 100% (Frameless), không dính UI hệ điều hành.
     """
     def __init__(self, msg_type: str, title: str, text: str, parent: QWidget | None = None):
-        super().__init__(parent)
-        self.setWindowTitle(title)
-        self.setText(text)
+        super().__init__(parent, Qt.Window | Qt.FramelessWindowHint)
+        self.setAttribute(Qt.WA_TranslucentBackground)
+        self.setModal(True)
         
-        # Cấu hình màu sắc nút bấm dựa theo loại thông báo
-        btn_bg = _ACCENT
-        btn_hover = _ACCENT_HOVER
-        
-        if msg_type == "success":
-            self.setIcon(QMessageBox.Information)
-            btn_bg = "#28A745"       # Xanh lá
-            btn_hover = "#218838"
-        elif msg_type == "warning":
-            self.setIcon(QMessageBox.Warning)
-            btn_bg = "#FFC107"       # Vàng
-            btn_hover = "#E0A800"
-        elif msg_type == "error":
-            self.setIcon(QMessageBox.Critical)
-            btn_bg = "#DC3545"       # Đỏ
-            btn_hover = "#C82333"
+        self.msg_type = msg_type
+        self.title_text = title
+        self.msg_text = text
+        self._drag_pos = None
 
-        # Apply QSS (CSS cho PyQt)
-        self.setStyleSheet(f"""
-            QMessageBox {{
+        self._build_ui()
+        self.setMinimumWidth(400)
+        self.setMaximumWidth(480)
+
+    def _build_ui(self):
+        # Layout chính của Dialog (chừa khoảng trống để vẽ bóng đổ shadow)
+        outer_layout = QVBoxLayout(self)
+        outer_layout.setContentsMargins(20, 20, 20, 20)
+
+        # Card nền trắng bo góc
+        card = QFrame()
+        card.setStyleSheet(f"""
+            QFrame {{
                 background-color: {_WHITE};
+                border-radius: 16px;
                 border: 1px solid {_BORDER_IDLE};
             }}
-            QLabel {{
-                color: {_TEXT_DARK};
-                font-family: 'Segoe UI';
-                font-size: 10pt;
-            }}
-            QPushButton {{
-                background-color: {btn_bg};
-                color: {_WHITE};
-                border: none;
-                border-radius: 6px;
-                padding: 6px 18px;
-                font-family: 'Segoe UI Semibold';
-                font-size: 10pt;
-                min-width: 80px;
-                min-height: 20px;
-            }}
-            QPushButton:hover {{
-                background-color: {btn_hover};
-            }}
-            QPushButton:pressed {{
-                padding-top: 2px;
-            }}
         """)
+        
+        # Hiệu ứng đổ bóng
+        shadow = QGraphicsDropShadowEffect(self)
+        shadow.setColor(QColor(0, 0, 0, 40))
+        shadow.setBlurRadius(20)
+        shadow.setOffset(0, 5)
+        card.setGraphicsEffect(shadow)
 
+        outer_layout.addWidget(card)
+
+        # Layout bên trong Card
+        card_layout = QVBoxLayout(card)
+        card_layout.setContentsMargins(24, 24, 24, 20)
+        card_layout.setSpacing(20)
+
+        # --- Nửa trên: Icon + Chữ ---
+        body_layout = QHBoxLayout()
+        body_layout.setSpacing(16)
+
+        icon_lbl = QLabel()
+        icon_lbl.setFont(QFont("Segoe UI Emoji", 32))
+        icon_lbl.setAlignment(Qt.AlignTop | Qt.AlignHCenter)
+        icon_lbl.setStyleSheet("background: transparent; border: none;")
+
+        # Cấu hình màu sắc, icon theo loại thông báo
+        btn_bg = _ACCENT
+        btn_hover = _ACCENT_HOVER
+        btn_text = "Đóng"
+
+        if self.msg_type == "success":
+            icon_lbl.setText("✅")
+            btn_bg = "#28A745"
+            btn_hover = "#218838"
+        elif self.msg_type == "warning":
+            icon_lbl.setText("⚠️")
+            btn_bg = "#F59E0B"
+            btn_hover = "#D97706"
+        elif self.msg_type == "error":
+            icon_lbl.setText("❌")
+            btn_bg = "#DC3545"
+            btn_hover = "#C82333"
+        elif self.msg_type == "question":
+            icon_lbl.setText("❓")
+            btn_text = "Đồng ý"
+
+        body_layout.addWidget(icon_lbl)
+
+        # Cột chữ (Tiêu đề + Nội dung)
+        text_col = QVBoxLayout()
+        text_col.setSpacing(6)
+        
+        title_lbl = QLabel(self.title_text)
+        title_lbl.setFont(QFont("Segoe UI", 12, QFont.Bold))
+        title_lbl.setStyleSheet(f"color: {_TEXT_DARK}; background: transparent; border: none;")
+        
+        msg_lbl = QLabel(self.msg_text)
+        msg_lbl.setFont(QFont("Segoe UI", 10))
+        msg_lbl.setStyleSheet(f"color: {_TEXT_MUTED}; background: transparent; border: none;")
+        msg_lbl.setWordWrap(True)
+
+        text_col.addWidget(title_lbl)
+        text_col.addWidget(msg_lbl)
+        text_col.addStretch()
+
+        body_layout.addLayout(text_col, 1)
+        card_layout.addLayout(body_layout)
+
+        # --- Nửa dưới: Nút bấm ---
+        footer_layout = QHBoxLayout()
+        footer_layout.addStretch()
+
+        # Nút Hủy (Chỉ hiện khi là câu hỏi xác nhận Yes/No)
+        if self.msg_type == "question":
+            cancel_btn = QPushButton("Hủy bỏ")
+            cancel_btn.setCursor(Qt.PointingHandCursor)
+            cancel_btn.setStyleSheet(f"""
+                QPushButton {{
+                    background-color: #F8F9FA; color: {_TEXT_MUTED};
+                    border: 1px solid {_BORDER_IDLE}; border-radius: 8px;
+                    padding: 8px 20px; font-family: 'Segoe UI Semibold'; font-size: 10pt;
+                }}
+                QPushButton:hover {{ background-color: #E2E8F0; color: {_TEXT_DARK}; }}
+            """)
+            cancel_btn.clicked.connect(self.reject)  # Trả về False
+            footer_layout.addWidget(cancel_btn)
+
+        # Nút Xác nhận (OK)
+        ok_btn = QPushButton(btn_text)
+        ok_btn.setCursor(Qt.PointingHandCursor)
+        ok_btn.setStyleSheet(f"""
+            QPushButton {{
+                background-color: {btn_bg}; color: {_WHITE};
+                border: none; border-radius: 8px;
+                padding: 8px 24px; font-family: 'Segoe UI Semibold'; font-size: 10pt;
+            }}
+            QPushButton:hover {{ background-color: {btn_hover}; }}
+            QPushButton:pressed {{ padding-top: 2px; }}
+        """)
+        ok_btn.clicked.connect(self.accept)  # Trả về True
+        footer_layout.addWidget(ok_btn)
+
+        card_layout.addLayout(footer_layout)
+
+    # =========================================================================
+    # Hỗ trợ kéo thả (Drag) cửa sổ vì không có thanh tiêu đề OS
+    # =========================================================================
+    def mousePressEvent(self, event):
+        if event.button() == Qt.LeftButton:
+            self._drag_pos = event.globalPos() - self.frameGeometry().topLeft()
+
+    def mouseMoveEvent(self, event):
+        if event.buttons() == Qt.LeftButton and self._drag_pos:
+            self.move(event.globalPos() - self._drag_pos)
+
+    def mouseReleaseEvent(self, event):
+        self._drag_pos = None
+
+    # =========================================================================
+    # API Công khai (Static Methods)
+    # =========================================================================
     @staticmethod
     def show_success(parent, title: str, text: str):
         msg = CustomMessageBox("success", title, text, parent)
@@ -888,3 +966,8 @@ class CustomMessageBox(QMessageBox):
     def show_error(parent, title: str, text: str):
         msg = CustomMessageBox("error", title, text, parent)
         msg.exec_()
+        
+    @staticmethod
+    def show_question(parent, title: str, text: str) -> bool:
+        msg = CustomMessageBox("question", title, text, parent)
+        return msg.exec_() == QDialog.Accepted

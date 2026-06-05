@@ -11,13 +11,13 @@ from PyQt5.QtWidgets import (
     QAbstractItemView, QSpacerItem,
     QLineEdit, QMessageBox
 )
-
+from src.views.components.widgets import GlowLineEdit, GoldButton, CustomMessageBox
 # ---------------------------------------------------------------------------
 # Import nội bộ (Cấu hình UI & Widgets)
 # ---------------------------------------------------------------------------
 try:
     from src.views.components.widgets import GlowLineEdit, GoldButton
-    from src.core.config import COLORS, FONTS
+    from src.core.config import C, FONTS
     from src.views.screens.detail_dialog import DetailDialog
 except ImportError:
     try:
@@ -26,12 +26,14 @@ except ImportError:
         DetailDialog = None  
     GlowLineEdit = None
     GoldButton   = None
-    COLORS = {
+    C = {
         "bg_main":      "#F8F9FA", "bg_panel":     "#FFFFFF", "white":        "#FFFFFF",
         "text_primary": "#1A2233", "text_muted":   "#6C757D", "accent":       "#007AFF",
         "accent_light": "#E8F3FF", "divider":      "#E2E8F0", "card_border":  "#DEE2E6",
-        "gold":         "#D4AF37", "danger":       "#DC3545", "warning":      "#FFC107",
-        "success":      "#28A745",
+        "hist_low_fg":  "#16A34A", "hist_low_bg":  "#F0FDF4", "hist_mid_fg":  "#F59E0B", 
+        "hist_mid_bg":  "#EFF6FF", "hist_high_fg": "#DC2626", "hist_high_bg": "#FEF2F2",
+        "hist_avg_fg":  "#B8860B", "hist_avg_bg":  "#FFFBEB", "hist_all_fg":  "#6B7280", 
+        "hist_all_bg":  "#F3F4F6", "hist_table_alt":"#F8FAFC", "hist_header": "#F1F5F9",
     }
     FONTS = {}
 
@@ -44,9 +46,9 @@ _PAGE_SIZE   = 8
 _RADIUS      = 12
 
 _LEVEL_CONFIG: dict[str, tuple[str, str, str]] = {
-    "Thấp"       : ("#16A34A", "#F0FDF4", "😌"),
-    "Bình thường": ("#F59E0B", "#EFF6FF", "😐"),
-    "Cao"        : ("#DC2626", "#FEF2F2", "😰"),
+    "Thấp"       : (C["hist_low_fg"], C["hist_low_bg"], "😌"),
+    "Bình thường": (C["hist_mid_fg"], C["hist_mid_bg"], "😐"),
+    "Cao"        : (C["hist_high_fg"], C["hist_high_bg"], "😰"),
 }
 
 _COLUMNS: list[str] = ["STT", "Ngày / Giờ", "Mức lo âu", "Chất lượng ngủ", "Điểm Stress", "Đánh giá", "Thao tác"]
@@ -64,12 +66,12 @@ class _PageBtn(QPushButton):
     def _style(self):
         self.setStyleSheet(f"""
             QPushButton {{
-                background: {COLORS['accent_light']}; color: {COLORS['accent']};
-                border: 1px solid {COLORS['divider']}; border-radius: 8px;
+                background: {C['accent_light']}; color: {C['accent']};
+                border: 1px solid {C['divider']}; border-radius: 8px;
                 padding: 0 16px; font-weight: 600;
             }}
-            QPushButton:hover {{ background: {COLORS['accent']}; color: #FFFFFF; }}
-            QPushButton:disabled {{ background: {COLORS['bg_main']}; color: {COLORS['text_muted']}; border: 1px solid {COLORS['divider']}; }}
+            QPushButton:hover {{ background: {C['accent']}; color: {C['white']}; }}
+            QPushButton:disabled {{ background: {C['bg_main']}; color: {C['text_muted']}; border: 1px solid {C['divider']}; }}
         """)
 
 
@@ -145,7 +147,7 @@ class HistoryScreen(QWidget):
         div = QFrame()
         div.setFrameShape(QFrame.HLine)
         div.setFixedHeight(1)
-        div.setStyleSheet(f"background: {COLORS['divider']}; border: none;")
+        div.setStyleSheet(f"background: {C['divider']}; border: none;")
         cl.addWidget(div)
 
         self._table = self._build_table()
@@ -161,10 +163,10 @@ class HistoryScreen(QWidget):
         title_col = QVBoxLayout()
         title = QLabel("Lịch sử kiểm tra sức khỏe")
         title.setFont(QFont(_FONT_FAMILY, 17, QFont.Bold))
-        title.setStyleSheet(f"color: {COLORS['text_primary']};")
+        title.setStyleSheet(f"color: {C['text_primary']};")
         sub = QLabel("Theo dõi toàn bộ nhật ký đánh giá mức độ stress của bạn")
         sub.setFont(QFont(_FONT_FAMILY, 9))
-        sub.setStyleSheet(f"color: {COLORS['text_muted']};")
+        sub.setStyleSheet(f"color: {C['text_muted']};")
         title_col.addWidget(title)
         title_col.addWidget(sub)
         lay.addLayout(title_col, 1)
@@ -182,9 +184,9 @@ class HistoryScreen(QWidget):
         self._stat_avg_lbl = QLabel("0.0")
 
         stats = [
-            ("Tổng lần kiểm tra", self._stat_total_lbl, "#007AFF", "#E8F3FF", "stat_blue"),
-            ("Mức Nguy Cơ Cao",   self._stat_high_lbl,  "#DC2626", "#FEF2F2", "stat_red"),
-            ("Điểm Stress Trung Bình", self._stat_avg_lbl,   "#B8860B", "#FFFBEB", "stat_gold"),
+            ("Tổng lần kiểm tra", self._stat_total_lbl, C["accent"], C["accent_light"], "stat_blue"),
+            ("Mức Nguy Cơ Cao",   self._stat_high_lbl,  C["hist_high_fg"], C["hist_high_bg"], "stat_red"),
+            ("Điểm Stress Trung Bình", self._stat_avg_lbl, C["hist_avg_fg"], C["hist_avg_bg"], "stat_gold"),
         ]
         
         for label, val_lbl, fg, bg, obj_name in stats:
@@ -222,7 +224,7 @@ class HistoryScreen(QWidget):
         self._search_box.setFixedHeight(40)
         self._search_box.setMinimumWidth(260)
         self._search_box.setFont(QFont(_FONT_FAMILY, 10))
-        self._search_box.setStyleSheet(f"QLineEdit {{ background: #FFFFFF; border: 1.5px solid {COLORS['divider']}; border-radius: 8px; padding: 0 12px; }}")
+        self._search_box.setStyleSheet(f"QLineEdit {{ background: {C['white']}; border: 1.5px solid {C['divider']}; border-radius: 8px; padding: 0 12px; }}")
         self._search_box.textChanged.connect(self._on_search_changed)
 
         self._filter_btns: dict[str, QPushButton] = {}
@@ -231,7 +233,13 @@ class HistoryScreen(QWidget):
         ff_lay.setContentsMargins(0, 0, 0, 0)
         ff_lay.setSpacing(6)
 
-        filter_defs = [("Tất cả", "#6B7280", "#F3F4F6"), ("Thấp", "#16A34A", "#F0FDF4"), ("Bình thường", "#F59E0B", "#EFF6FF"), ("Cao", "#DC2626", "#FEF2F2")]
+        filter_defs = [
+            ("Tất cả", C["hist_all_fg"], C["hist_all_bg"]), 
+            ("Thấp", C["hist_low_fg"], C["hist_low_bg"]), 
+            ("Bình thường", C["hist_mid_fg"], C["hist_mid_bg"]), 
+            ("Cao", C["hist_high_fg"], C["hist_high_bg"])
+        ]
+        
         for label, fg, bg in filter_defs:
             btn = QPushButton(label)
             btn.setFixedHeight(36)
@@ -248,7 +256,7 @@ class HistoryScreen(QWidget):
         self._active_filter = "Tất cả"
         self._record_count_label = QLabel()
         self._record_count_label.setFont(QFont(_FONT_FAMILY, 8))
-        self._record_count_label.setStyleSheet(f"color: {COLORS['text_muted']};")
+        self._record_count_label.setStyleSheet(f"color: {C['text_muted']};")
 
         lay.addWidget(self._search_box)
         lay.addWidget(filter_frame)
@@ -261,7 +269,7 @@ class HistoryScreen(QWidget):
         fg = btn.property("fg")
         bg = btn.property("bg")
         if active:
-            btn.setStyleSheet(f"QPushButton {{ background: {fg}; color: #FFFFFF; border: none; border-radius: 8px; padding: 0 12px; font-weight: 600; }}")
+            btn.setStyleSheet(f"QPushButton {{ background: {fg}; color: {C['white']}; border: none; border-radius: 8px; padding: 0 12px; font-weight: 600; }}")
         else:
             btn.setStyleSheet(f"QPushButton {{ background: {bg}; color: {fg}; border: none; border-radius: 8px; padding: 0 12px; }} QPushButton:hover {{ background: {fg}22; }}")
 
@@ -284,10 +292,9 @@ class HistoryScreen(QWidget):
         h.setHighlightSections(False)
         h.setFixedHeight(46)
         
-        # Thiết lập độ rộng các cột cố định
         h.setSectionResizeMode(0, QHeaderView.Fixed); tbl.setColumnWidth(0, 50)
         h.setSectionResizeMode(5, QHeaderView.Fixed); tbl.setColumnWidth(5, 120)
-        h.setSectionResizeMode(6, QHeaderView.Fixed); tbl.setColumnWidth(6, 170) # Nới rộng để chứa 2 nút (Chi tiết & Xóa)
+        h.setSectionResizeMode(6, QHeaderView.Fixed); tbl.setColumnWidth(6, 170)
         return tbl
 
     def _build_pagination_bar(self) -> QWidget:
@@ -336,7 +343,7 @@ class HistoryScreen(QWidget):
                 item = QTableWidgetItem(value)
                 if col_idx == 0:
                     item.setTextAlignment(Qt.AlignCenter | Qt.AlignVCenter)
-                    item.setForeground(QBrush(QColor(COLORS["text_muted"])))
+                    item.setForeground(QBrush(QColor(C["text_muted"])))
                 else:
                     item.setTextAlignment(Qt.AlignLeft | Qt.AlignVCenter)
 
@@ -350,27 +357,24 @@ class HistoryScreen(QWidget):
                     item.setTextAlignment(Qt.AlignCenter | Qt.AlignVCenter)
                 self._table.setItem(row_idx, col_idx, item)
 
-            # Cột Thao Tác (Có cả nút Chi Tiết và Nút Xóa)
             action_widget = QWidget()
             action_lay = QHBoxLayout(action_widget)
             action_lay.setContentsMargins(6, 6, 6, 6)
             action_lay.setSpacing(6)
             
-            # Nút Chi tiết
             detail_btn = QPushButton("🔍 Chi tiết")
             detail_btn.setFixedHeight(32)
             detail_btn.setCursor(Qt.PointingHandCursor)
-            level_cfg = _LEVEL_CONFIG.get(level, ("#6B7280", "#F3F4F6", ""))
+            level_cfg = _LEVEL_CONFIG.get(level, (C["hist_all_fg"], C["hist_all_bg"], ""))
             fg_c, bg_c, _ = level_cfg
-            detail_btn.setStyleSheet(f"QPushButton {{ background: {bg_c}; color: {fg_c}; border: none; border-radius: 8px; font-weight: 600; padding: 0 8px;}} QPushButton:hover {{ background: {fg_c}; color: #FFFFFF; }}")
+            detail_btn.setStyleSheet(f"QPushButton {{ background: {bg_c}; color: {fg_c}; border: none; border-radius: 8px; font-weight: 600; padding: 0 8px;}} QPushButton:hover {{ background: {fg_c}; color: {C['white']}; }}")
             detail_btn.clicked.connect(lambda checked, r=rec: self._open_detail(r))
             
-            # Nút Xóa
             del_btn = QPushButton("🗑️")
             del_btn.setFixedHeight(32)
             del_btn.setFixedWidth(36)
             del_btn.setCursor(Qt.PointingHandCursor)
-            del_btn.setStyleSheet(f"QPushButton {{ background: #FEE2E2; color: #DC2626; border: none; border-radius: 8px; font-weight: 600; }} QPushButton:hover {{ background: #DC2626; color: #FFFFFF; }}")
+            del_btn.setStyleSheet(f"QPushButton {{ background: {C['hist_high_bg']}; color: {C['hist_high_fg']}; border: none; border-radius: 8px; font-weight: 600; }} QPushButton:hover {{ background: {C['hist_high_fg']}; color: {C['white']}; }}")
             del_btn.clicked.connect(lambda checked, r_id=rec["id"]: self._confirm_delete(r_id))
             
             action_lay.addWidget(detail_btn)
@@ -392,13 +396,11 @@ class HistoryScreen(QWidget):
             dlg.exec_()
             
     def _confirm_delete(self, record_id: int):
-        reply = QMessageBox.question(
+        is_yes = CustomMessageBox.show_question(
             self, 'Xác nhận xóa', 
-            'Bạn có chắc chắn muốn xóa bản ghi đánh giá này khỏi lịch sử không?',
-            QMessageBox.Yes | QMessageBox.No, QMessageBox.No
+            'Bạn có chắc chắn muốn xóa bản ghi đánh giá này khỏi lịch sử không?'
         )
-        if reply == QMessageBox.Yes:
-            # Phát tín hiệu ra cho HistoryController bắt và xử lý xóa Database
+        if is_yes:
             self.delete_requested.emit(record_id)
 
     # ── Lọc & Tìm Kiếm ──────────────────────────────────────────────────────
@@ -445,9 +447,9 @@ class HistoryScreen(QWidget):
     # ── CSS Tùy Chỉnh ────────────────────────────────────────────────────────
     def _apply_style(self):
         self.setStyleSheet(f"""
-            HistoryScreen {{ background-color: {COLORS['bg_main']}; }}
-            QFrame#history_card {{ background-color: {COLORS['white']}; border: 1px solid {COLORS['card_border']}; border-radius: {_RADIUS}px; }}
-            QTableWidget#history_table {{ background-color: {COLORS['white']}; alternate-background-color: #F8FAFC; border: none; outline: 0; }}
-            QTableWidget#history_table::item {{ border-bottom: 1px solid {COLORS['divider']}; padding-left: 10px; }}
-            QHeaderView::section {{ background-color: #F1F5F9; color: {COLORS['text_muted']}; font-weight: 600; padding-left: 10px; border: none; border-bottom: 2px solid {COLORS['divider']}; }}
+            HistoryScreen {{ background-color: {C['bg_main']}; }}
+            QFrame#history_card {{ background-color: {C['white']}; border: 1px solid {C['card_border']}; border-radius: {_RADIUS}px; }}
+            QTableWidget#history_table {{ background-color: {C['white']}; alternate-background-color: {C['hist_table_alt']}; border: none; outline: 0; }}
+            QTableWidget#history_table::item {{ border-bottom: 1px solid {C['divider']}; padding-left: 10px; }}
+            QHeaderView::section {{ background-color: {C['hist_header']}; color: {C['text_muted']}; font-weight: 600; padding-left: 10px; border: none; border-bottom: 2px solid {C['divider']}; }}
         """)
