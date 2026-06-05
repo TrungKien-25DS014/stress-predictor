@@ -17,23 +17,9 @@ from src.views.components.widgets import MetricCard
 from src.views.screens.survey import SurveyScreen
 from src.views.screens.dashboard import DashboardScreen
 from src.views.screens.history import HistoryScreen
+from src.views.screens.settings import SettingsScreen
 from src.core.config import COLORS, FONTS 
 
-
-class SettingsScreen(QWidget):
-    """Màn hình Cài đặt (Settings)."""
-    def __init__(self, parent=None):
-        super().__init__(parent)
-        self._build_ui()
-
-    def _build_ui(self):
-        layout = QVBoxLayout(self)
-        layout.setAlignment(Qt.AlignCenter)
-        lbl = QLabel("⚙️  Settings Screen\n(Placeholder – sẽ được implement tại screens/settings.py)")
-        lbl.setFont(FONTS["body"])
-        lbl.setAlignment(Qt.AlignCenter)
-        lbl.setStyleSheet(f"color: {COLORS['text_muted']};")
-        layout.addWidget(lbl)
 
 
 # ===========================================================================
