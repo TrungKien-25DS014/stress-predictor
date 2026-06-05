@@ -1,141 +1,96 @@
 from __future__ import annotations
-
 from PyQt5.QtWidgets import (
     QLineEdit, QPushButton, QWidget, QSlider,
     QGraphicsDropShadowEffect, QLabel, QVBoxLayout, QHBoxLayout,
-    QFrame, QRadioButton, QButtonGroup, QTabWidget, QStackedWidget, QSizePolicy, QDialog
+    QFrame, QRadioButton, QButtonGroup, QSizePolicy, QDialog
 )
-from PyQt5.QtCore import Qt, QRectF, QPropertyAnimation, QEasingCurve
-from PyQt5.QtGui import (
-    QFont, QColor, QPainter, QPixmap,
-    QPaintEvent, QFocusEvent, QResizeEvent,
-)
+from PyQt5.QtCore import Qt
+from PyQt5.QtGui import QFont, QColor, QPainter, QPixmap, QPaintEvent, QFocusEvent, QResizeEvent
 
-# ---------------------------------------------------------------------------
-# Design Tokens
-# ---------------------------------------------------------------------------
-_ACCENT        = "#007AFF"
-_ACCENT_HOVER  = "#0062CC"
-_BORDER_IDLE   = "#CED4DA"
-_BORDER_FOCUS  = "#007AFF"
-_GOLD          = "#D4AF37"
-_GOLD_HOVER    = "#B8960C"
-_GOLD_PRESSED  = "#9A7D0A"
-_WHITE         = "#FFFFFF"
-_TEXT_DARK     = "#212529"
-_TEXT_MUTED    = "#6C757D"
-_RADIUS        = 8
+from src.core.config import C
 
+# Độ bo góc mặc định áp dụng cho hệ thống điều khiển
+DEFAULT_RADIUS = 8
 
-# ===========================================================================
-# 1. GlowLineEdit
-# ===========================================================================
 class GlowLineEdit(QLineEdit):
-    """
-    Ô nhập liệu với hiệu ứng viền phát sáng khi được focus.
-
+    '''
+    Ô nhập liệu thông minh tích hợp hiệu ứng viền phát sáng khi kích hoạt.
     Trạng thái:
-      - Idle   : viền xám nhạt (#CED4DA), không có shadow
-      - Focus  : viền xanh (#007AFF) + QGraphicsDropShadowEffect màu xanh
-
-    Tham số khởi tạo:
-      placeholder (str) : Placeholder text hiển thị khi rỗng
-      parent            : Widget cha
-    """
+      - Bình thường: Viền xám nhạt tinh tế, không bóng đổ.
+      - Tập trung (Focus): Viền đổi màu accent và hiển thị hiệu ứng phát sáng nhẹ.
+    '''
 
     def __init__(self, placeholder: str = "", parent: QWidget | None = None):
         super().__init__(parent)
-
         if placeholder:
             self.setPlaceholderText(placeholder)
 
         self.setFont(QFont("Segoe UI", 10))
         self.setFixedHeight(42)
 
-        # Tạo shadow effect – ban đầu tắt (blurRadius = 0)
+        # Cấu hình hiệu ứng phát sáng mặc định ẩn
         self._shadow = QGraphicsDropShadowEffect(self)
-        self._shadow.setColor(QColor(_ACCENT))
+        self._shadow.setColor(QColor(C["accent"]))
         self._shadow.setBlurRadius(0)
         self._shadow.setOffset(0, 0)
         self.setGraphicsEffect(self._shadow)
 
         self._apply_idle_style()
 
-    # ── Style helpers ──────────────────────────────────────────────────
     def _apply_idle_style(self):
+        '''Thiết lập giao diện mặc định khi không hoạt động'''
         self.setStyleSheet(f"""
             QLineEdit {{
-                background-color : {_WHITE};
-                color            : {_TEXT_DARK};
-                border           : 1.5px solid {_BORDER_IDLE};
-                border-radius    : {_RADIUS}px;
+                background-color : {C['white']};
+                color            : {C['text_primary']};
+                border           : 1.5px solid {C['card_border']};
+                border-radius    : {DEFAULT_RADIUS}px;
                 padding          : 0px 12px;
                 font-family      : 'Segoe UI';
                 font-size        : 10pt;
             }}
             QLineEdit:disabled {{
-                background-color : #F8F9FA;
-                color            : {_TEXT_MUTED};
+                background-color : {C['bg_main']};
+                color            : {C['text_muted']};
             }}
         """)
 
     def _apply_focus_style(self):
+        '''Thiết lập giao diện nổi bật khi người dùng chọn vào ô'''
         self.setStyleSheet(f"""
             QLineEdit {{
-                background-color : {_WHITE};
-                color            : {_TEXT_DARK};
-                border           : 1.5px solid {_BORDER_FOCUS};
-                border-radius    : {_RADIUS}px;
+                background-color : {C['white']};
+                color            : {C['text_primary']};
+                border           : 1.5px solid {C['accent']};
+                border-radius    : {DEFAULT_RADIUS}px;
                 padding          : 0px 12px;
                 font-family      : 'Segoe UI';
                 font-size        : 10pt;
             }}
         """)
 
-    # ── Event overrides ────────────────────────────────────────────────
     def focusInEvent(self, event: QFocusEvent):
-        """Kích hoạt glow khi người dùng click vào ô."""
+        '''Kích hoạt hiệu ứng phát sáng khi ô nhập liệu nhận focus'''
         super().focusInEvent(event)
         self._apply_focus_style()
         self._shadow.setBlurRadius(18)
-        self._shadow.setColor(QColor(0, 122, 255, 160))   # #007AFF với alpha 160
+        self._shadow.setColor(QColor(0, 122, 255, 160))
 
     def focusOutEvent(self, event: QFocusEvent):
-        """Tắt glow khi người dùng click ra ngoài."""
+        '''Tắt hiệu ứng phát sáng khi ô nhập liệu mất focus'''
         super().focusOutEvent(event)
         self._apply_idle_style()
         self._shadow.setBlurRadius(0)
 
 
-# ===========================================================================
-# 2. GoldButton
-# ===========================================================================
 class GoldButton(QPushButton):
-    """
-    Nút bấm phong cách vàng gold.
+    '''
+    Nút bấm mang phong cách vàng ánh kim cao cấp.
+    Thích hợp dùng cho các hành động quan trọng bậc nhất hoặc tạo điểm nhấn thương hiệu.
+    '''
 
-    Trạng thái:
-      - Normal  : nền #D4AF37, chữ trắng
-      - Hover   : nền đậm hơn #B8960C
-      - Pressed : nền tối hơn #9A7D0A + lún nhẹ (padding-top tăng 2px)
-      - Disabled: nền xám, chữ muted
-
-    Tham số khởi tạo:
-      text   (str)  : Nhãn nút
-      width  (int)  : Chiều rộng cố định (0 = tự động)
-      height (int)  : Chiều cao cố định (mặc định 44px)
-      parent        : Widget cha
-    """
-
-    def __init__(
-        self,
-        text: str = "Button",
-        width: int = 0,
-        height: int = 44,
-        parent: QWidget | None = None,
-    ):
+    def __init__(self, text: str = "Button", width: int = 0, height: int = 44, parent: QWidget | None = None):
         super().__init__(text, parent)
-
         self.setFont(QFont("Segoe UI Semibold", 10))
         self.setCursor(Qt.PointingHandCursor)
         self.setFixedHeight(height)
@@ -143,117 +98,81 @@ class GoldButton(QPushButton):
         if width > 0:
             self.setFixedWidth(width)
 
-        # Drop shadow nhẹ để tạo chiều sâu
+        # Hiệu ứng đổ bóng mờ tạo chiều sâu cho nút
         shadow = QGraphicsDropShadowEffect(self)
-        shadow.setColor(QColor(212, 175, 55, 80))   # gold với alpha 80
+        shadow.setColor(QColor(212, 175, 55, 80))
         shadow.setBlurRadius(12)
         shadow.setOffset(0, 3)
         self.setGraphicsEffect(shadow)
 
         self._apply_style()
 
-    # ── Style ──────────────────────────────────────────────────────────
     def _apply_style(self):
+        '''Cấu hình bảng style sheet đồng bộ màu gold từ config'''
         self.setStyleSheet(f"""
             QPushButton {{
-                background-color : {_GOLD};
-                color            : {_WHITE};
+                background-color : {C['gold']};
+                color            : {C['white']};
                 border           : none;
-                border-radius    : {_RADIUS}px;
+                border-radius    : {DEFAULT_RADIUS}px;
                 padding          : 0px 20px;
                 font-family      : 'Segoe UI Semibold';
                 font-size        : 10pt;
                 letter-spacing   : 0.3px;
             }}
-
-            /* ── Hover: làm tối nền ── */
             QPushButton:hover {{
-                background-color : {_GOLD_HOVER};
+                background-color : {C['btn_gold_h_edge']};
             }}
-
-            /* ── Pressed: tối hơn nữa + lún nhẹ ── */
             QPushButton:pressed {{
-                background-color : {_GOLD_PRESSED};
+                background-color : {C['btn_gold_p_edge']};
                 padding-top      : 2px;
             }}
-
-            /* ── Disabled ── */
             QPushButton:disabled {{
-                background-color : #E9ECEF;
-                color            : {_TEXT_MUTED};
+                background-color : {C['divider']};
+                color            : {C['text_muted']};
             }}
         """)
 
-    # ── Convenience: đổi nhãn và tự resize ────────────────────────────
     def set_label(self, text: str):
+        '''Hỗ trợ thay đổi tiêu đề động'''
         self.setText(text)
 
 
-# ===========================================================================
-# 3. BackgroundWidget
-# ===========================================================================
 class BackgroundWidget(QWidget):
-    """
-    Widget hiển thị ảnh nền tự động scale theo kích thước cửa sổ.
+    '''
+    Widget xử lý hình nền động, có khả năng tự động co giãn tối ưu 
+    theo độ phân giải hiển thị thực tế của cửa sổ ứng dụng.
+    '''
 
-    Ảnh được vẽ lại trong paintEvent mỗi khi widget thay đổi kích thước,
-    đảm bảo luôn lấp đầy toàn bộ diện tích mà không méo (AspectRatioMode
-    có thể tuỳ chỉnh qua thuộc tính scale_mode).
-
-    Tham số khởi tạo:
-      image_path (str)         : Đường dẫn tuyệt đối / tương đối tới file ảnh
-      scale_mode               : Qt.KeepAspectRatioByExpanding (mặc định)
-                                 hoặc Qt.IgnoreAspectRatio / Qt.KeepAspectRatio
-      overlay_opacity (float)  : 0.0–1.0, độ mờ của lớp phủ trắng chồng lên
-                                 ảnh để nội dung bên trên dễ đọc hơn (mặc định 0)
-      parent                   : Widget cha
-    """
-
-    def __init__(
-        self,
-        image_path: str = "",
-        scale_mode: Qt.AspectRatioMode = Qt.KeepAspectRatioByExpanding,
-        overlay_opacity: float = 0.0,
-        parent: QWidget | None = None,
-    ):
+    def __init__(self, image_path: str = "", scale_mode: Qt.AspectRatioMode = Qt.KeepAspectRatioByExpanding, overlay_opacity: float = 0.0, parent: QWidget | None = None):
         super().__init__(parent)
-
-        self._pixmap          : QPixmap | None = None
-        self._scaled_cache    : QPixmap | None = None   # cache tránh scale lại liên tục
-        self._last_size                        = None   # kích thước lần scale trước
-        self.scale_mode       = scale_mode
-        self.overlay_opacity  = max(0.0, min(1.0, overlay_opacity))
+        self._pixmap = None
+        self._scaled_cache = None
+        self._last_size = None
+        self.scale_mode = scale_mode
+        self.overlay_opacity = max(0.0, min(1.0, overlay_opacity))
 
         if image_path:
             self.set_image(image_path)
 
-    # ── Public API ─────────────────────────────────────────────────────
     def set_image(self, image_path: str):
-        """
-        Tải và hiển thị ảnh nền mới.
-        Có thể gọi lại bất cứ lúc nào để đổi ảnh nền runtime.
-        """
+        '''Cập nhật hình nền mới cho giao diện'''
         px = QPixmap(image_path)
         if px.isNull():
-            # Ảnh không tồn tại hoặc không đọc được – giữ nền trong suốt
-            self._pixmap       = None
+            self._pixmap = None
             self._scaled_cache = None
         else:
-            self._pixmap       = px
-            self._scaled_cache = None   # Xoá cache để vẽ lại
+            self._pixmap = px
+            self._scaled_cache = None
         self.update()
 
     def set_overlay_opacity(self, value: float):
-        """Điều chỉnh độ mờ của lớp phủ (0.0 = trong suốt, 1.0 = trắng hoàn toàn)."""
+        '''Điều chỉnh độ hiển thị của lớp phủ mịn phía trên ảnh nền'''
         self.overlay_opacity = max(0.0, min(1.0, value))
         self.update()
 
-    # ── Event overrides ────────────────────────────────────────────────
     def paintEvent(self, event: QPaintEvent):
-        """
-        Vẽ ảnh nền scale khớp widget, sau đó vẽ lớp phủ mờ nếu cần.
-        Được gọi tự động mỗi khi widget cần redraw (bao gồm cả resize).
-        """
+        '''Vẽ ảnh nền cùng lớp bao phủ dựa trên bộ đệm cache để tối ưu hiệu năng CPU'''
         painter = QPainter(self)
         painter.setRenderHint(QPainter.SmoothPixmapTransform)
         painter.setRenderHint(QPainter.Antialiasing)
@@ -261,28 +180,17 @@ class BackgroundWidget(QWidget):
         rect = self.rect()
 
         if self._pixmap is not None:
-            # Chỉ scale lại khi kích thước thực sự thay đổi (cache tối ưu CPU)
             current_size = rect.size()
             if current_size != self._last_size or self._scaled_cache is None:
-                self._scaled_cache = self._pixmap.scaled(
-                    current_size,
-                    self.scale_mode,
-                    Qt.SmoothTransformation,
-                )
+                self._scaled_cache = self._pixmap.scaled(current_size, self.scale_mode, Qt.SmoothTransformation)
                 self._last_size = current_size
 
-            # Canh giữa ảnh trong trường hợp KeepAspectRatio có viền trống
-            img_w = self._scaled_cache.width()
-            img_h = self._scaled_cache.height()
-            x_offset = (rect.width()  - img_w) // 2
-            y_offset = (rect.height() - img_h) // 2
+            x_offset = (rect.width() - self._scaled_cache.width()) // 2
+            y_offset = (rect.height() - self._scaled_cache.height()) // 2
             painter.drawPixmap(x_offset, y_offset, self._scaled_cache)
-
         else:
-            # Không có ảnh – tô nền trắng mặc định
-            painter.fillRect(rect, QColor("#F8F9FA"))
+            painter.fillRect(rect, QColor(C["bg_main"]))
 
-        # Lớp phủ bán trong suốt để tăng độ tương phản cho nội dung bên trên
         if self.overlay_opacity > 0.0:
             overlay_color = QColor(255, 255, 255, int(self.overlay_opacity * 255))
             painter.fillRect(rect, overlay_color)
@@ -290,208 +198,111 @@ class BackgroundWidget(QWidget):
         painter.end()
 
     def resizeEvent(self, event: QResizeEvent):
-        """Xoá cache khi widget bị resize để paintEvent scale lại."""
+        '''Giải phóng bộ nhớ cache hình ảnh cũ khi kích thước khung thay đổi'''
         self._scaled_cache = None
         super().resizeEvent(event)
 
 
-if __name__ == "__main__":
-    import sys
-    from PyQt5.QtWidgets import QApplication, QWidget, QVBoxLayout
-
-    app = QApplication(sys.argv)
-
-    window = QWidget()
-    window.resize(500, 300)
-
-    layout = QVBoxLayout(window)
-
-    input_box = GlowLineEdit("Nhập gì đó...")
-    btn = GoldButton("Submit")
-
-    layout.addWidget(input_box)
-    layout.addWidget(btn)
-
-    window.show()
-    sys.exit(app.exec_())
-
-# ===========================================================================
-# 4. StyledCard
-# ===========================================================================
 class StyledCard(QWidget):
-    """
-    Card container tái sử dụng theo phong cách Clinical Light.
+    '''
+    Khung chứa dữ liệu thông tin (Card) được chuẩn hóa theo hệ thống Clinical Light.
+    Hỗ trợ 5 trạng thái thiết kế trực quan thông qua thuộc tính 'variant'.
+    '''
 
-    Các biến thể (variant):
-      - 'default'  : Nền trắng, viền xám nhạt, bo góc 12px
-      - 'accent'   : Nền xanh nhạt (#E8F3FF), viền xanh brand
-      - 'success'  : Nền xanh lá nhạt, viền #28A745
-      - 'warning'  : Nền vàng nhạt, viền #FFC107
-      - 'danger'   : Nền đỏ nhạt, viền #DC3545
-
-    Tham số khởi tạo:
-      variant  (str)   : Một trong 5 biến thể trên (mặc định 'default')
-      padding  (int)   : Padding nội dung bên trong card (mặc định 16px)
-      radius   (int)   : Border-radius (mặc định 12px)
-      shadow   (bool)  : Thêm drop-shadow nhẹ hay không (mặc định True)
-      parent           : Widget cha
-
-    Cách dùng:
-      card = StyledCard(variant='accent')
-      card.body_layout.addWidget(QLabel("Nội dung"))
-    """
-
-    _VARIANTS = {
-        "default": {
-            "bg":     "#FFFFFF",
-            "border": "#DEE2E6",
-            "shadow": QColor(0, 0, 0, 25),
-        },
-        "accent": {
-            "bg":     "#E8F3FF",
-            "border": "#007AFF",
-            "shadow": QColor(0, 122, 255, 40),
-        },
-        "success": {
-            "bg":     "#E9F7EF",
-            "border": "#28A745",
-            "shadow": QColor(40, 167, 69, 40),
-        },
-        "warning": {
-            "bg":     "#FFF9E6",
-            "border": "#FFC107",
-            "shadow": QColor(255, 193, 7, 50),
-        },
-        "danger": {
-            "bg":     "#FDECEA",
-            "border": "#DC3545",
-            "shadow": QColor(220, 53, 69, 40),
-        },
-    }
-
-    def __init__(
-        self,
-        variant: str = "default",
-        padding: int = 16,
-        radius: int = 12,
-        shadow: bool = True,
-        parent: QWidget | None = None,
-    ):
+    def __init__(self, variant: str = "default", padding: int = 16, radius: int = 12, shadow: bool = True, parent: QWidget | None = None):
         super().__init__(parent)
 
-        v = self._VARIANTS.get(variant, self._VARIANTS["default"])
+        variants_config = {
+            "default": {"bg": C["white"], "border": C["card_border"], "shadow": QColor(0, 0, 0, 25)},
+            "accent":  {"bg": C["accent_light"], "border": C["accent"], "shadow": QColor(0, 122, 255, 40)},
+            "success": {"bg": C.get("success_bg", "#E9F7EF"), "border": C["success"], "shadow": QColor(40, 167, 69, 40)},
+            "warning": {"bg": C.get("warning_bg", "#FFF9E6"), "border": C["warning"], "shadow": QColor(255, 193, 7, 50)},
+            "danger":  {"bg": C.get("danger_bg", "#FDECEA"), "border": C["danger"], "shadow": QColor(220, 53, 69, 40)}
+        }
+
+        cfg = variants_config.get(variant, variants_config["default"])
 
         if shadow:
             fx = QGraphicsDropShadowEffect(self)
-            fx.setColor(v["shadow"])
+            fx.setColor(cfg["shadow"])
             fx.setBlurRadius(16)
             fx.setOffset(0, 3)
             self.setGraphicsEffect(fx)
 
         self.setStyleSheet(f"""
             StyledCard {{
-                background-color : {v['bg']};
-                border           : 1px solid {v['border']};
+                background-color : {cfg['bg']};
+                border           : 1px solid {cfg['border']};
                 border-radius    : {radius}px;
             }}
         """)
 
-        # Layout body – người dùng addWidget vào đây
         self.body_layout = QVBoxLayout(self)
         self.body_layout.setContentsMargins(padding, padding, padding, padding)
         self.body_layout.setSpacing(8)
 
 
-# ===========================================================================
-# 5. PrimaryButton
-# ===========================================================================
 class PrimaryButton(QPushButton):
-    """
-    Nút bấm chủ đạo (Primary) theo màu accent xanh brand.
+    '''
+    Nút bấm chủ đạo mang màu sắc thương hiệu xanh y tế.
+    Hỗ trợ các dạng thức: Solid (nền đặc), Outline (khung viền) và Ghost (trong suốt).
+    '''
 
-    Trạng thái:
-      - Normal   : nền #007AFF, chữ trắng
-      - Hover    : nền #0062CC
-      - Pressed  : nền #004FA3 + padding-top +2px
-      - Disabled : nền xám nhạt, chữ muted
-
-    Biến thể (variant):
-      - 'solid'   (mặc định) : nền đặc xanh
-      - 'outline'            : nền trong suốt, viền xanh, chữ xanh
-      - 'ghost'              : không viền, chữ xanh, hover nhẹ
-
-    Tham số khởi tạo:
-      text     (str)   : Nhãn nút
-      variant  (str)   : 'solid' | 'outline' | 'ghost'
-      width    (int)   : Chiều rộng cố định (0 = tự động)
-      height   (int)   : Chiều cao (mặc định 44px)
-      parent           : Widget cha
-    """
-
-    _CSS: dict[str, str] = {
-        "solid": f"""
-            QPushButton {{
-                background-color : {_ACCENT};
-                color            : {_WHITE};
-                border           : none;
-                border-radius    : {_RADIUS}px;
-                padding          : 0px 20px;
-                font-family      : 'Segoe UI Semibold';
-                font-size        : 10pt;
-                letter-spacing   : 0.3px;
-            }}
-            QPushButton:hover    {{ background-color: {_ACCENT_HOVER}; }}
-            QPushButton:pressed  {{ background-color: #004FA3; padding-top: 2px; }}
-            QPushButton:disabled {{ background-color: #E9ECEF; color: {_TEXT_MUTED}; }}
-        """,
-        "outline": f"""
-            QPushButton {{
-                background-color : transparent;
-                color            : {_ACCENT};
-                border           : 1.5px solid {_ACCENT};
-                border-radius    : {_RADIUS}px;
-                padding          : 0px 20px;
-                font-family      : 'Segoe UI Semibold';
-                font-size        : 10pt;
-            }}
-            QPushButton:hover    {{ background-color: #E8F3FF; }}
-            QPushButton:pressed  {{ background-color: #D0E8FF; padding-top: 2px; }}
-            QPushButton:disabled {{ border-color: #CED4DA; color: {_TEXT_MUTED}; }}
-        """,
-        "ghost": f"""
-            QPushButton {{
-                background-color : transparent;
-                color            : {_ACCENT};
-                border           : none;
-                border-radius    : {_RADIUS}px;
-                padding          : 0px 16px;
-                font-family      : 'Segoe UI';
-                font-size        : 10pt;
-            }}
-            QPushButton:hover    {{ background-color: #E8F3FF; }}
-            QPushButton:pressed  {{ background-color: #D0E8FF; padding-top: 2px; }}
-            QPushButton:disabled {{ color: {_TEXT_MUTED}; }}
-        """,
-    }
-
-    def __init__(
-        self,
-        text: str = "Button",
-        variant: str = "solid",
-        width: int = 0,
-        height: int = 44,
-        parent: QWidget | None = None,
-    ):
+    def __init__(self, text: str = "Button", variant: str = "solid", width: int = 0, height: int = 44, parent: QWidget | None = None):
         super().__init__(text, parent)
-
         self.setFont(QFont("Segoe UI Semibold", 10))
         self.setCursor(Qt.PointingHandCursor)
         self.setFixedHeight(height)
         if width > 0:
             self.setFixedWidth(width)
 
-        css = self._CSS.get(variant, self._CSS["solid"])
-        self.setStyleSheet(css)
+        css_templates = {
+            "solid": f"""
+                QPushButton {{
+                    background-color : {C['accent']};
+                    color            : {C['white']};
+                    border           : none;
+                    border-radius    : {DEFAULT_RADIUS}px;
+                    padding          : 0px 20px;
+                    font-family      : 'Segoe UI Semibold';
+                    font-size        : 10pt;
+                    letter-spacing   : 0.3px;
+                }}
+                QPushButton:hover {{ background-color: {C['accent_hover']}; }}
+                QPushButton:pressed {{ background-color: {C.get('accent_pressed', '#004FA3')}; padding-top: 2px; }}
+                QPushButton:disabled {{ background-color: {C['divider']}; color: {C['text_muted']}; }}
+            """,
+            "outline": f"""
+                QPushButton {{
+                    background-color : transparent;
+                    color            : {C['accent']};
+                    border           : 1.5px solid {C['accent']};
+                    border-radius    : {DEFAULT_RADIUS}px;
+                    padding          : 0px 20px;
+                    font-family      : 'Segoe UI Semibold';
+                    font-size        : 10pt;
+                }}
+                QPushButton:hover {{ background-color: {C['accent_light']}; }}
+                QPushButton:pressed {{ background-color: {C.get('accent_light_pressed', '#D0E8FF')}; padding-top: 2px; }}
+                QPushButton:disabled {{ border-color: {C['card_border']}; color: {C['text_muted']}; }}
+            """,
+            "ghost": f"""
+                QPushButton {{
+                    background-color : transparent;
+                    color            : {C['accent']};
+                    border           : none;
+                    border-radius    : {DEFAULT_RADIUS}px;
+                    padding          : 0px 16px;
+                    font-family      : 'Segoe UI';
+                    font-size        : 10pt;
+                }}
+                QPushButton:hover {{ background-color: {C['accent_light']}; }}
+                QPushButton:pressed {{ background-color: {C.get('accent_light_pressed', '#D0E8FF')}; padding-top: 2px; }}
+                QPushButton:disabled {{ color: {C['text_muted']}; }}
+            """
+        }
+
+        self.setStyleSheet(css_templates.get(variant, css_templates["solid"]))
 
         if variant == "solid":
             shadow = QGraphicsDropShadowEffect(self)
@@ -501,40 +312,18 @@ class PrimaryButton(QPushButton):
             self.setGraphicsEffect(shadow)
 
 
-# ===========================================================================
-# 6. StyledInput  (wrapper GlowLineEdit với label + error message)
-# ===========================================================================
 class StyledInput(QWidget):
-    """
-    Input field đầy đủ: Label tiêu đề + GlowLineEdit + thông báo lỗi.
+    '''
+    Thành phần nhập liệu hoàn chỉnh bao gồm Label tiêu đề, ô nhập phát sáng 
+    và khu vực cảnh báo thông tin lỗi trực quan.
+    '''
 
-    Tham số khởi tạo:
-      label        (str)  : Nhãn hiển thị phía trên input
-      placeholder  (str)  : Placeholder bên trong input
-      required     (bool) : Hiện dấu * đỏ nếu True
-      parent               : Widget cha
-
-    API công khai:
-      .text()              → str   : Lấy nội dung nhập
-      .set_error(msg)               : Hiển thị thông báo lỗi màu đỏ
-      .clear_error()                : Xoá thông báo lỗi
-      .input                        : Truy cập GlowLineEdit bên trong
-    """
-
-    def __init__(
-        self,
-        label: str = "",
-        placeholder: str = "",
-        required: bool = False,
-        parent: QWidget | None = None,
-    ):
+    def __init__(self, label: str = "", placeholder: str = "", required: bool = False, parent: QWidget | None = None):
         super().__init__(parent)
-
         root = QVBoxLayout(self)
         root.setContentsMargins(0, 0, 0, 0)
         root.setSpacing(4)
 
-        # ── Label row ──────────────────────────────────────────────────
         if label:
             lbl_row = QHBoxLayout()
             lbl_row.setContentsMargins(0, 0, 0, 0)
@@ -542,42 +331,41 @@ class StyledInput(QWidget):
 
             lbl = QLabel(label)
             lbl.setFont(QFont("Segoe UI Semibold", 9))
-            lbl.setStyleSheet(f"color: {_TEXT_DARK};")
+            lbl.setStyleSheet(f"color: {C['text_primary']};")
             lbl_row.addWidget(lbl)
 
             if required:
                 req = QLabel("*")
                 req.setFont(QFont("Segoe UI", 9, QFont.Bold))
-                req.setStyleSheet("color: #DC3545;")
+                req.setStyleSheet(f"color: {C['danger']};")
                 lbl_row.addWidget(req)
 
             lbl_row.addStretch()
             root.addLayout(lbl_row)
 
-        # ── GlowLineEdit ───────────────────────────────────────────────
         self.input = GlowLineEdit(placeholder)
         root.addWidget(self.input)
 
-        # ── Error label (ẩn mặc định) ──────────────────────────────────
         self._error_lbl = QLabel("")
         self._error_lbl.setFont(QFont("Segoe UI", 8))
-        self._error_lbl.setStyleSheet("color: #DC3545;")
+        self._error_lbl.setStyleSheet(f"color: {C['danger']};")
         self._error_lbl.setVisible(False)
         root.addWidget(self._error_lbl)
 
-    # ── Public API ─────────────────────────────────────────────────────
     def text(self) -> str:
+        '''Lấy chuỗi văn bản người dùng nhập hiện tại'''
         return self.input.text()
 
     def set_error(self, message: str):
+        '''Bật hiển thị trạng thái lỗi cùng thông điệp cảnh báo'''
         self._error_lbl.setText(f"⚠  {message}")
         self._error_lbl.setVisible(True)
         self.input.setStyleSheet(f"""
             QLineEdit {{
-                background-color : {_WHITE};
-                color            : {_TEXT_DARK};
-                border           : 1.5px solid #DC3545;
-                border-radius    : {_RADIUS}px;
+                background-color : {C['white']};
+                color            : {C['text_primary']};
+                border           : 1.5px solid {C['danger']};
+                border-radius    : {DEFAULT_RADIUS}px;
                 padding          : 0px 12px;
                 font-family      : 'Segoe UI';
                 font-size        : 10pt;
@@ -585,75 +373,40 @@ class StyledInput(QWidget):
         """)
 
     def clear_error(self):
+        '''Khôi phục lại giao diện bình thường, xóa cảnh báo lỗi'''
         self._error_lbl.setVisible(False)
         self.input._apply_idle_style()
 
 
-# ===========================================================================
-# 7. StyledSlider  (Slider với label, min/max labels và giá trị hiện tại)
-# ===========================================================================
 class StyledSlider(QWidget):
-    """
-    Slider tái sử dụng đầy đủ tiêu chuẩn Clinical Light.
-
-    Gồm:
-      - Label tiêu đề
-      - QSlider ngang với accent color
-      - Nhãn min / max hai bên
-      - Badge hiển thị giá trị hiện tại
-
-    Tham số khởi tạo:
-      label      (str)   : Tiêu đề slider
-      min_val    (int)   : Giá trị nhỏ nhất (mặc định 0)
-      max_val    (int)   : Giá trị lớn nhất (mặc định 10)
-      default    (int)   : Giá trị ban đầu
-      min_label  (str)   : Nhãn cạnh trái (mặc định "Thấp")
-      max_label  (str)   : Nhãn cạnh phải (mặc định "Cao")
-      parent             : Widget cha
-
-    Signal:
-      valueChanged(int)  : Phát mỗi khi giá trị thay đổi
-
-    API công khai:
-      .value()  → int    : Lấy giá trị hiện tại
-      .setValue(int)     : Đặt giá trị lập trình
-    """
-
+    '''
+    Thanh trượt lựa chọn thông số nâng cao tích hợp nhãn mô tả, 
+    giới hạn cận biên (Thấp/Cao) và Badge số hiển thị kết quả thời gian thực.
+    '''
     from PyQt5.QtCore import pyqtSignal as _sig
     valueChanged = _sig(int)
 
-    def __init__(
-        self,
-        label: str = "",
-        min_val: int = 0,
-        max_val: int = 10,
-        default: int | None = None,
-        min_label: str = "Thấp",
-        max_label: str = "Cao",
-        parent: QWidget | None = None,
-    ):
+    def __init__(self, label: str = "", min_val: int = 0, max_val: int = 10, default: int | None = None, min_label: str = "Thấp", max_label: str = "Cao", parent: QWidget | None = None):
         super().__init__(parent)
-
         root = QVBoxLayout(self)
         root.setContentsMargins(0, 0, 0, 0)
         root.setSpacing(6)
 
-        # ── Title row ──────────────────────────────────────────────────
         if label:
             title_row = QHBoxLayout()
             title_row.setContentsMargins(0, 0, 0, 0)
 
             title_lbl = QLabel(label)
             title_lbl.setFont(QFont("Segoe UI Semibold", 9))
-            title_lbl.setStyleSheet(f"color: {_TEXT_DARK};")
+            title_lbl.setStyleSheet(f"color: {C['text_primary']};")
 
             self._badge = QLabel()
             self._badge.setFont(QFont("Segoe UI Semibold", 9))
             self._badge.setAlignment(Qt.AlignCenter)
             self._badge.setFixedSize(36, 22)
             self._badge.setStyleSheet(f"""
-                background-color: {_ACCENT};
-                color: {_WHITE};
+                background-color: {C['accent']};
+                color: {C['white']};
                 border-radius: 6px;
             """)
 
@@ -664,14 +417,13 @@ class StyledSlider(QWidget):
         else:
             self._badge = QLabel()
 
-        # ── Slider row ─────────────────────────────────────────────────
         slider_row = QHBoxLayout()
         slider_row.setContentsMargins(0, 0, 0, 0)
         slider_row.setSpacing(8)
 
         lo_lbl = QLabel(min_label)
         lo_lbl.setFont(QFont("Segoe UI", 8))
-        lo_lbl.setStyleSheet(f"color: {_TEXT_MUTED};")
+        lo_lbl.setStyleSheet(f"color: {C['text_muted']};")
 
         self._slider = QSlider(Qt.Horizontal)
         self._slider.setRange(min_val, max_val)
@@ -680,60 +432,56 @@ class StyledSlider(QWidget):
         self._slider.setStyleSheet(f"""
             QSlider::groove:horizontal {{
                 height      : 6px;
-                background  : #E9ECEF;
+                background  : {C['divider']};
                 border-radius: 3px;
             }}
             QSlider::sub-page:horizontal {{
-                background  : {_ACCENT};
+                background  : {C['accent']};
                 border-radius: 3px;
             }}
             QSlider::handle:horizontal {{
-                background  : {_WHITE};
-                border      : 2px solid {_ACCENT};
+                background  : {C['white']};
+                border      : 2px solid {C['accent']};
                 width        : 18px;
                 height       : 18px;
                 margin       : -6px 0;
                 border-radius: 9px;
             }}
             QSlider::handle:horizontal:hover {{
-                background: #E8F3FF;
+                background: {C['accent_light']};
             }}
         """)
 
         hi_lbl = QLabel(max_label)
         hi_lbl.setFont(QFont("Segoe UI", 8))
-        hi_lbl.setStyleSheet(f"color: {_TEXT_MUTED};")
+        hi_lbl.setStyleSheet(f"color: {C['text_muted']};")
 
         slider_row.addWidget(lo_lbl)
         slider_row.addWidget(self._slider, 1)
         slider_row.addWidget(hi_lbl)
         root.addLayout(slider_row)
 
-        # ── Connect ────────────────────────────────────────────────────
         self._slider.valueChanged.connect(self._on_change)
-        self._on_change(init_val)   # Khởi tạo badge
+        self._on_change(init_val)
 
-    # ── Slots ──────────────────────────────────────────────────────────
     def _on_change(self, v: int):
+        '''Cập nhật dữ liệu hiển thị lên badge khi giá trị thanh đổi'''
         self._badge.setText(str(v))
         self.valueChanged.emit(v)
 
-    # ── Public API ─────────────────────────────────────────────────────
     def value(self) -> int:
+        '''Lấy giá trị hiện tại của thanh trượt'''
         return self._slider.value()
 
     def setValue(self, v: int):
+        '''Thiết lập giá trị lập trình cho thanh trượt'''
         self._slider.setValue(v)
-class MetricCard(QFrame):
-    """Card hiển thị một chỉ số đơn lẻ với accent bar màu ở đỉnh."""
 
-    def __init__(
-        self,
-        title: str,
-        value: str = "–",
-        accent_color: str = "#4A90D9",
-        parent: QWidget | None = None,
-    ) -> None:
+
+class MetricCard(QFrame):
+    '''Thẻ biểu diễn chỉ số đơn lẻ kèm thanh Accent chỉ định màu sắc ở đỉnh khung.'''
+
+    def __init__(self, title: str, value: str = "–", accent_color: str = "#4A90D9", parent: QWidget | None = None) -> None:
         super().__init__(parent)
         self._title = title
         self._value = value
@@ -741,14 +489,14 @@ class MetricCard(QFrame):
         self._build_ui()
         self._apply_style()
 
-    # ── Public API ──────────────────────────────────────────────────────────
     def set_value(self, value: str) -> None:
+        '''Cập nhật nội dung giá trị đo lường'''
         self._value_label.setText(value)
 
     def set_title(self, title: str) -> None:
+        '''Cập nhật chuỗi tiêu đề của thẻ'''
         self._title_label.setText(title)
 
-    # ── Private ─────────────────────────────────────────────────────────────
     def _build_ui(self) -> None:
         layout = QVBoxLayout(self)
         layout.setContentsMargins(18, 16, 18, 16)
@@ -771,39 +519,33 @@ class MetricCard(QFrame):
         layout.addWidget(self._value_label)
 
     def _apply_style(self) -> None:
-        self._accent_bar.setStyleSheet(
-            f"background-color: {self._accent_color}; border-radius: 2px;"
-        )
-        self.setStyleSheet(
-            f"""
+        self._accent_bar.setStyleSheet(f"background-color: {self._accent_color}; border-radius: 2px;")
+        self.setStyleSheet(f"""
             MetricCard {{
-                background-color: #FFFFFF;
+                background-color: {C['white']};
                 border-radius: 12px;
-                border: 1px solid #E8EDF2;
+                border: 1px solid {C['divider']};
             }}
             MetricCard:hover {{
                 border: 1px solid {self._accent_color};
             }}
-            """
-        )
+        """)
+        
         title_font = QFont("Segoe UI", 11)
-        title_font.setWeight(QFont.Normal)
         self._title_label.setFont(title_font)
-        self._title_label.setStyleSheet("color: #6B7280;")
+        self._title_label.setStyleSheet(f"color: {C['text_muted']};")
 
-        value_font = QFont("Segoe UI", 28)
-        value_font.setWeight(QFont.Bold)
+        value_font = QFont("Segoe UI", 28, QFont.Bold)
         self._value_label.setFont(value_font)
-        self._value_label.setStyleSheet("color: #1A1D2E;")
-from PyQt5.QtWidgets import QMessageBox
+        self._value_label.setStyleSheet(f"color: {C['text_primary']};")
 
-# ===========================================================================
-# 8. CustomMessageBox (Hộp thoại thông báo đồng bộ phong cách)
-# ===========================================================================
+
 class CustomMessageBox(QDialog):
-    """
-    Hộp thoại thông báo tùy biến 100% (Frameless), không dính UI hệ điều hành.
-    """
+    '''
+    Hộp thoại thông báo Frameless tùy biến toàn diện, độc lập hoàn toàn 
+    với giao diện mặc định nhàm chán của hệ điều hành.
+    '''
+    
     def __init__(self, msg_type: str, title: str, text: str, parent: QWidget | None = None):
         super().__init__(parent, Qt.Window | Qt.FramelessWindowHint)
         self.setAttribute(Qt.WA_TranslucentBackground)
@@ -819,21 +561,18 @@ class CustomMessageBox(QDialog):
         self.setMaximumWidth(480)
 
     def _build_ui(self):
-        # Layout chính của Dialog (chừa khoảng trống để vẽ bóng đổ shadow)
         outer_layout = QVBoxLayout(self)
         outer_layout.setContentsMargins(20, 20, 20, 20)
 
-        # Card nền trắng bo góc
         card = QFrame()
         card.setStyleSheet(f"""
             QFrame {{
-                background-color: {_WHITE};
+                background-color: {C['white']};
                 border-radius: 16px;
-                border: 1px solid {_BORDER_IDLE};
+                border: 1px solid {C['card_border']};
             }}
         """)
         
-        # Hiệu ứng đổ bóng
         shadow = QGraphicsDropShadowEffect(self)
         shadow.setColor(QColor(0, 0, 0, 40))
         shadow.setBlurRadius(20)
@@ -842,12 +581,10 @@ class CustomMessageBox(QDialog):
 
         outer_layout.addWidget(card)
 
-        # Layout bên trong Card
         card_layout = QVBoxLayout(card)
         card_layout.setContentsMargins(24, 24, 24, 20)
         card_layout.setSpacing(20)
 
-        # --- Nửa trên: Icon + Chữ ---
         body_layout = QHBoxLayout()
         body_layout.setSpacing(16)
 
@@ -856,22 +593,21 @@ class CustomMessageBox(QDialog):
         icon_lbl.setAlignment(Qt.AlignTop | Qt.AlignHCenter)
         icon_lbl.setStyleSheet("background: transparent; border: none;")
 
-        # Cấu hình màu sắc, icon theo loại thông báo
-        btn_bg = _ACCENT
-        btn_hover = _ACCENT_HOVER
+        btn_bg = C["accent"]
+        btn_hover = C["accent_hover"]
         btn_text = "Đóng"
 
         if self.msg_type == "success":
             icon_lbl.setText("✅")
-            btn_bg = "#28A745"
+            btn_bg = C["success"]
             btn_hover = "#218838"
         elif self.msg_type == "warning":
             icon_lbl.setText("⚠️")
-            btn_bg = "#F59E0B"
+            btn_bg = C["warning"]
             btn_hover = "#D97706"
         elif self.msg_type == "error":
             icon_lbl.setText("❌")
-            btn_bg = "#DC3545"
+            btn_bg = C["danger"]
             btn_hover = "#C82333"
         elif self.msg_type == "question":
             icon_lbl.setText("❓")
@@ -879,17 +615,16 @@ class CustomMessageBox(QDialog):
 
         body_layout.addWidget(icon_lbl)
 
-        # Cột chữ (Tiêu đề + Nội dung)
         text_col = QVBoxLayout()
         text_col.setSpacing(6)
         
         title_lbl = QLabel(self.title_text)
         title_lbl.setFont(QFont("Segoe UI", 12, QFont.Bold))
-        title_lbl.setStyleSheet(f"color: {_TEXT_DARK}; background: transparent; border: none;")
+        title_lbl.setStyleSheet(f"color: {C['text_primary']}; background: transparent; border: none;")
         
         msg_lbl = QLabel(self.msg_text)
         msg_lbl.setFont(QFont("Segoe UI", 10))
-        msg_lbl.setStyleSheet(f"color: {_TEXT_MUTED}; background: transparent; border: none;")
+        msg_lbl.setStyleSheet(f"color: {C['text_muted']}; background: transparent; border: none;")
         msg_lbl.setWordWrap(True)
 
         text_col.addWidget(title_lbl)
@@ -899,75 +634,65 @@ class CustomMessageBox(QDialog):
         body_layout.addLayout(text_col, 1)
         card_layout.addLayout(body_layout)
 
-        # --- Nửa dưới: Nút bấm ---
         footer_layout = QHBoxLayout()
         footer_layout.addStretch()
 
-        # Nút Hủy (Chỉ hiện khi là câu hỏi xác nhận Yes/No)
         if self.msg_type == "question":
             cancel_btn = QPushButton("Hủy bỏ")
             cancel_btn.setCursor(Qt.PointingHandCursor)
             cancel_btn.setStyleSheet(f"""
                 QPushButton {{
-                    background-color: #F8F9FA; color: {_TEXT_MUTED};
-                    border: 1px solid {_BORDER_IDLE}; border-radius: 8px;
+                    background-color: {C['bg_main']}; color: {C['text_muted']};
+                    border: 1px solid {C['card_border']}; border-radius: 8px;
                     padding: 8px 20px; font-family: 'Segoe UI Semibold'; font-size: 10pt;
                 }}
-                QPushButton:hover {{ background-color: #E2E8F0; color: {_TEXT_DARK}; }}
+                QPushButton:hover {{ background-color: {C.get('btn_outline_bg', '#F1F3F5')}; color: {C['text_primary']}; }}
             """)
-            cancel_btn.clicked.connect(self.reject)  # Trả về False
+            cancel_btn.clicked.connect(self.reject)
             footer_layout.addWidget(cancel_btn)
 
-        # Nút Xác nhận (OK)
         ok_btn = QPushButton(btn_text)
         ok_btn.setCursor(Qt.PointingHandCursor)
         ok_btn.setStyleSheet(f"""
             QPushButton {{
-                background-color: {btn_bg}; color: {_WHITE};
+                background-color: {btn_bg}; color: {C['white']};
                 border: none; border-radius: 8px;
                 padding: 8px 24px; font-family: 'Segoe UI Semibold'; font-size: 10pt;
             }}
             QPushButton:hover {{ background-color: {btn_hover}; }}
             QPushButton:pressed {{ padding-top: 2px; }}
         """)
-        ok_btn.clicked.connect(self.accept)  # Trả về True
+        ok_btn.clicked.connect(self.accept)
         footer_layout.addWidget(ok_btn)
 
         card_layout.addLayout(footer_layout)
 
-    # =========================================================================
-    # Hỗ trợ kéo thả (Drag) cửa sổ vì không có thanh tiêu đề OS
-    # =========================================================================
     def mousePressEvent(self, event):
+        '''Ghi nhận điểm nhấn chuột đầu tiên hỗ trợ tính năng kéo di chuyển cửa sổ'''
         if event.button() == Qt.LeftButton:
             self._drag_pos = event.globalPos() - self.frameGeometry().topLeft()
 
     def mouseMoveEvent(self, event):
+        '''Di chuyển cửa sổ theo tọa độ kéo chuột thực tế'''
         if event.buttons() == Qt.LeftButton and self._drag_pos:
             self.move(event.globalPos() - self._drag_pos)
 
     def mouseReleaseEvent(self, event):
+        '''Hủy trạng thái kéo cửa sổ khi buông chuột'''
         self._drag_pos = None
 
-    # =========================================================================
-    # API Công khai (Static Methods)
-    # =========================================================================
     @staticmethod
     def show_success(parent, title: str, text: str):
-        msg = CustomMessageBox("success", title, text, parent)
-        msg.exec_()
+        CustomMessageBox("success", title, text, parent).exec_()
 
     @staticmethod
     def show_warning(parent, title: str, text: str):
-        msg = CustomMessageBox("warning", title, text, parent)
-        msg.exec_()
+        CustomMessageBox("warning", title, text, parent).exec_()
 
     @staticmethod
     def show_error(parent, title: str, text: str):
-        msg = CustomMessageBox("error", title, text, parent)
-        msg.exec_()
+        CustomMessageBox("error", title, text, parent).exec_()
         
     @staticmethod
     def show_question(parent, title: str, text: str) -> bool:
-        msg = CustomMessageBox("question", title, text, parent)
-        return msg.exec_() == QDialog.Accepted
+        return CustomMessageBox("question", title, text, parent).exec_() == QDialog.Accepted

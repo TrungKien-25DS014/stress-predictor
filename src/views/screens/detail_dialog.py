@@ -9,15 +9,10 @@ from PyQt5.QtWidgets import (
     QPushButton, QSizePolicy, QVBoxLayout, QWidget,
 )
 
-# Sử dụng config chung
 from src.core.config import C
 
-# ---------------------------------------------------------------------------
-# Constants
-# ---------------------------------------------------------------------------
 _FONT = "Segoe UI"
 
-# Config hiển thị theo từng mức đánh giá (dùng màu từ config)
 DETAIL_CONFIG: dict[str, dict] = {
     "Thấp": {
         "gradient_a": C["detail_low_a"],
@@ -40,7 +35,6 @@ DETAIL_CONFIG: dict[str, dict] = {
         "emoji":       "😐",
         "gradient_a":  C["detail_mid_a"],
         "gradient_b":  C["detail_mid_b"],
-        "glow":        "#F59E0B55", # Có thể giữ alpha cứng hoặc định nghĩa thêm
         "ring_color":  C["detail_mid_a"],
         "tag_bg":      C["detail_mid_bg"],
         "tag_text":    C["detail_mid_txt"],
@@ -71,7 +65,6 @@ DETAIL_CONFIG: dict[str, dict] = {
     },
 }
 
-# 5 nhóm yếu tố cho donut chart
 FACTOR_GROUPS: list[dict] = [
     {"name": "Tâm lý",     "color": C["factor_psy"]},
     {"name": "Thể chất",   "color": C["factor_phy"]},
@@ -80,7 +73,6 @@ FACTOR_GROUPS: list[dict] = [
     {"name": "Xã hội",     "color": C["factor_soc"]},
 ]
 
-# 3 mức để vẽ thang đo
 _SCALE_LEVELS = [
     ("Thấp",        C["detail_low_a"]),
     ("Bình thường", C["detail_mid_a"]),
@@ -88,10 +80,11 @@ _SCALE_LEVELS = [
 ]
 
 
-# ============================================================================
-# Widget vẽ — ArcRing (vòng cung bán nguyệt)
-# ============================================================================
 class ArcRingWidget(QWidget):
+    '''
+    Widget biểu đồ dạng vòng cung (Arc) với hiệu ứng chuyển động (Animation).
+    Trực quan hóa mức độ stress tổng quát dưới dạng phần trăm (%).
+    '''
     def __init__(self, color: str, pct: int, parent: QWidget | None = None) -> None:
         super().__init__(parent)
         self._color   = QColor(color)
@@ -102,14 +95,16 @@ class ArcRingWidget(QWidget):
 
         timer = QTimer(self)
         timer.timeout.connect(self._tick)
-        timer.start(16)   # ~60 fps
+        timer.start(16)
 
     def _tick(self) -> None:
+        '''Xử lý bước lặp animation chạy thông số % từ 0 đến ngưỡng chỉ định.'''
         if self._current < self._target:
             self._current = min(self._current + 3, self._target)
             self.update()
 
     def paintEvent(self, _) -> None:
+        '''Tạo hình nền xám nhạt và đường vòng cung dải màu tương ứng.'''
         p = QPainter(self)
         p.setRenderHint(QPainter.Antialiasing)
         w, h = self.width(), self.height()
@@ -120,11 +115,9 @@ class ArcRingWidget(QWidget):
         cx    = w // 2
         cy    = arc_h
 
-        # Track (nền xám dùng divider)
         p.setPen(QPen(QColor(C['divider']), 12, Qt.SolidLine, Qt.RoundCap))
         p.drawArc(cx - r, cy - r, 2 * r, 2 * r, 0 * 16, 180 * 16)
 
-        # Arc màu
         sweep = int(self._current / 100 * 180)
         grad  = QLinearGradient(cx - r, cy, cx + r, cy)
         grad.setColorAt(0, self._color.lighter(120))
@@ -132,17 +125,17 @@ class ArcRingWidget(QWidget):
         p.setPen(QPen(grad, 12, Qt.SolidLine, Qt.RoundCap))
         p.drawArc(cx - r, cy - r, 2 * r, 2 * r, 180 * 16, -sweep * 16)
 
-        # Số %
         p.setPen(QPen(self._color))
         p.setFont(QFont(_FONT, 15, QFont.Bold))
         p.drawText(cx - 35, cy + 6, 70, 24, Qt.AlignCenter, f"{self._current}%")
         p.end()
 
 
-# ============================================================================
-# Widget vẽ — DonutMini
-# ============================================================================
 class DonutMiniWidget(QWidget):
+    '''
+    Widget biểu đồ bánh quy (Donut) tối giản, không sử dụng Matplotlib 
+    để đảm bảo hiệu năng, chuyên dùng phân tích tỷ trọng yếu tố.
+    '''
     def __init__(
         self,
         sizes: list[float],
@@ -158,6 +151,7 @@ class DonutMiniWidget(QWidget):
         self.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
 
     def paintEvent(self, _) -> None:
+        '''Dựng hình chiếc bánh bằng các lớp cung theo tỷ trọng và khoét lỗ trung tâm.'''
         p = QPainter(self)
         p.setRenderHint(QPainter.Antialiasing)
         w, h   = self.width(), self.height()
@@ -180,10 +174,11 @@ class DonutMiniWidget(QWidget):
         p.end()
 
 
-# ============================================================================
-# DetailDialog
-# ============================================================================
 class DetailDialog(QDialog):
+    '''
+    Hộp thoại chi tiết báo cáo lịch sử. 
+    Trực quan hóa cấu trúc điểm phân bổ 5 mặt sức khỏe ở quá khứ.
+    '''
     def __init__(
         self,
         record: dict[str, Any],
@@ -203,6 +198,7 @@ class DetailDialog(QDialog):
         self.resize(720, 620)
 
     def _build_ui(self) -> None:
+        '''Khởi tạo thiết kế hộp thoại chi tiết gồm 3 mảng: Header, thân và Footer.'''
         outer = QVBoxLayout(self)
         outer.setContentsMargins(20, 20, 20, 20)
 
@@ -235,6 +231,7 @@ class DetailDialog(QDialog):
         lay.addWidget(self._make_footer())
 
     def _make_header(self) -> QWidget:
+        '''Chứa thông tin tóm tắt và đánh giá cấp độ nổi bật qua background dải màu (gradient).'''
         cfg = self._cfg
         rec = self._rec
 
@@ -255,7 +252,7 @@ class DetailDialog(QDialog):
 
         badge = QFrame()
         badge.setFixedSize(62, 62)
-        badge.setStyleSheet("QFrame { background: rgba(255,255,255,0.22); border-radius: 31px; }")
+        badge.setStyleSheet(f"QFrame {{ background: {C.get('glass_light', 'rgba(255,255,255,0.22)')}; border-radius: 31px; }}")
         bl = QVBoxLayout(badge)
         bl.setContentsMargins(0, 0, 0, 0)
         el = QLabel(cfg["emoji"])
@@ -269,10 +266,7 @@ class DetailDialog(QDialog):
 
         tag_lbl = QLabel(f"  Đánh giá: {self._level_name}  ")
         tag_lbl.setFont(QFont(_FONT + " Semibold", 8))
-        tag_lbl.setStyleSheet(
-            "background: rgba(255,255,255,0.28); color: white;"
-            " border-radius: 10px; padding: 2px 0;"
-        )
+        tag_lbl.setStyleSheet(f"background: {C.get('glass_mid', 'rgba(255,255,255,0.28)')}; color: white; border-radius: 10px; padding: 2px 0;")
         tag_lbl.setFixedHeight(22)
         tag_lbl.setMaximumWidth(180)
 
@@ -282,7 +276,7 @@ class DetailDialog(QDialog):
 
         date_lbl = QLabel(f"🗓  {rec.get('datetime', '—')}")
         date_lbl.setFont(QFont(_FONT, 9))
-        date_lbl.setStyleSheet("color: rgba(255,255,255,0.85); background: transparent;")
+        date_lbl.setStyleSheet(f"color: {C.get('glass_high', 'rgba(255,255,255,0.85)')}; background: transparent;")
 
         txt.addWidget(tag_lbl)
         txt.addWidget(title_lbl)
@@ -292,12 +286,12 @@ class DetailDialog(QDialog):
         close_btn.setFixedSize(34, 34)
         close_btn.setCursor(Qt.PointingHandCursor)
         close_btn.setFont(QFont(_FONT, 11))
-        close_btn.setStyleSheet("""
-            QPushButton {
-                background: rgba(255,255,255,0.20);
+        close_btn.setStyleSheet(f"""
+            QPushButton {{
+                background: {C.get('glass_dark', 'rgba(255,255,255,0.20)')};
                 color: white; border-radius: 17px; border: none;
-            }
-            QPushButton:hover { background: rgba(255,255,255,0.38); }
+            }}
+            QPushButton:hover {{ background: {C.get('glass_hover', 'rgba(255,255,255,0.38)')}; }}
         """)
         close_btn.clicked.connect(self.accept)
 
@@ -307,6 +301,7 @@ class DetailDialog(QDialog):
         return header
 
     def _make_left_col(self) -> QVBoxLayout:
+        '''Cột bên trái tích hợp thẻ hiển thị % stress tổng hợp, khung thang mức độ và phần gợi ý.'''
         cfg = self._cfg
         col = QVBoxLayout()
         col.setSpacing(14)
@@ -394,6 +389,7 @@ class DetailDialog(QDialog):
         return col
 
     def _make_right_col(self) -> QFrame:
+        '''Khu vực chứa thống kê Donut, các nhóm yếu tố tác động và điểm chi tiết.'''
         rec  = self._rec
         card = self._card()
         lay  = QVBoxLayout(card)
@@ -470,6 +466,7 @@ class DetailDialog(QDialog):
         return card
 
     def _make_footer(self) -> QFrame:
+        '''Dải chứa nút thao tác thoát hộp thoại, nằm ở cuối giao diện.'''
         cfg = self._cfg
         footer = QFrame()
         footer.setStyleSheet(f"""
@@ -503,22 +500,27 @@ class DetailDialog(QDialog):
 
     @staticmethod
     def _card() -> QFrame:
+        '''Trả về khung giao diện với đường viền bo nhẹ phổ quát.'''
         c = QFrame()
         c.setStyleSheet(f"QFrame {{ background: {C['white']}; border: none; border-radius: 14px; }}")
         return c
 
     def mousePressEvent(self, e) -> None:
+        '''Cho phép bắt đầu di chuyển khung báo cáo từ bất kỳ vị trí trống nào.'''
         if e.button() == Qt.LeftButton:
             self._drag_pos = e.globalPos() - self.frameGeometry().topLeft()
 
     def mouseMoveEvent(self, e) -> None:
+        '''Cập nhật liên tục tọa độ thả cửa sổ.'''
         if e.buttons() == Qt.LeftButton and self._drag_pos:
             self.move(e.globalPos() - self._drag_pos)
 
     def mouseReleaseEvent(self, e) -> None:
+        '''Giải phóng con trỏ khi hoàn tất.'''
         self._drag_pos = None
 
     def showEvent(self, e) -> None:
+        '''Canh giữa hộp thoại ngay khi vừa hiển thị.'''
         super().showEvent(e)
         if self.parent():
             pr = self.parent().frameGeometry()
@@ -526,38 +528,3 @@ class DetailDialog(QDialog):
                 pr.center().x() - self.width()  // 2,
                 pr.center().y() - self.height() // 2,
             )
-
-
-# ============================================================================
-# Standalone preview
-# ============================================================================
-if __name__ == "__main__":
-    import sys
-    from PyQt5.QtWidgets import QApplication
-
-    app = QApplication(sys.argv)
-    app.setStyle("Fusion")
-
-    win = QWidget()
-    win.setWindowTitle("DetailDialog – Preview")
-    win.resize(400, 200)
-    win.setStyleSheet(f"background: {C['bg']};")
-
-    layout = QVBoxLayout(win)
-
-    sample_record = {
-        "id": 1, "datetime": "21:45 - 02/06/2026",
-        "anxiety_level": 8, "sleep_hours": 7.5,
-        "score": 35, "level": "Bình thường",
-        "factors": [3.2, 2.8, 2.1, 3.5, 1.9],
-    }
-
-    for level in ["Thấp", "Bình thường", "Cao"]:
-        btn = QPushButton(f"Xem báo cáo — {level}")
-        btn.setFixedHeight(44)
-        rec = {**sample_record, "level": level}
-        btn.clicked.connect(lambda _, r=rec: DetailDialog(r, win).exec_())
-        layout.addWidget(btn)
-
-    win.show()
-    sys.exit(app.exec_())

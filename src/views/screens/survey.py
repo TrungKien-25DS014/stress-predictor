@@ -6,18 +6,17 @@ from PyQt5.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QScrollArea,
     QTabWidget, QLabel, QSlider, QSpinBox, QDoubleSpinBox,
     QRadioButton, QButtonGroup, QFrame, QProgressBar,
-    QSizePolicy, QFormLayout, QGraphicsDropShadowEffect,
+    QSizePolicy, QGraphicsDropShadowEffect,
 )
-from PyQt5.QtCore import Qt, pyqtSignal, QPropertyAnimation, QEasingCurve
+from PyQt5.QtCore import Qt, pyqtSignal
 from PyQt5.QtGui import QFont, QColor
 from src.views.components.widgets import GoldButton, StyledCard
 from src.core.config import C
+
 TOTAL_QUESTIONS = 20
 
-# 20 câu hỏi chia theo 5 Tab
+# Dữ liệu bộ câu hỏi chia theo 5 nhóm yếu tố chính
 SURVEY_TABS: list[dict] = [
-
-    # ── Tab 1: Tâm lý & Học tập ──────────────────────────────────────────
     {
         "tab_label": "🧠  Tâm lý",
         "tab_key":   "mental",
@@ -52,7 +51,6 @@ SURVEY_TABS: list[dict] = [
             },
         ],
     },
-    # ── Tab 2: Thể chất & Giấc ngủ ──────────────────────────────────────
     {
         "tab_label": "💊  Thể chất",
         "tab_key":   "physical",
@@ -71,7 +69,7 @@ SURVEY_TABS: list[dict] = [
                 "hint":    "Tự đánh giá hoặc kết quả đo gần nhất",
                 "widget":  "radio",
                 "options": ["Thấp (1)", "Bình thường (2)", "Cao (3)"],
-                "value_offset": 1, # Vì dataset dùng 1-3 nhưng radio index là 0-2
+                "value_offset": 1,
             },
             {
                 "key":     "sleep_quality",
@@ -91,7 +89,6 @@ SURVEY_TABS: list[dict] = [
             },
         ],
     },
-    # ── Tab 3: Môi trường sống ───────────────────────────────────────────
     {
         "tab_label": "🏠  Môi trường",
         "tab_key":   "environment",
@@ -130,7 +127,6 @@ SURVEY_TABS: list[dict] = [
             },
         ],
     },
-    # ── Tab 4: Học tập & Nghề nghiệp ────────────────────────────────────
     {
         "tab_label": "📚  Học tập",
         "tab_key":   "academics",
@@ -168,7 +164,6 @@ SURVEY_TABS: list[dict] = [
             },
         ],
     },
-    # ── Tab 5: Xã hội & Hành vi ──────────────────────────────────────────
     {
         "tab_label": "🤝  Xã hội",
         "tab_key":   "social",
@@ -208,8 +203,7 @@ SURVEY_TABS: list[dict] = [
     },
 ]
 
-# CSS helpers
-
+# Định dạng CSS quy chuẩn dựa theo biến màu C
 _SLIDER_CSS = f"""
     QSlider::groove:horizontal {{
         height: 6px;
@@ -235,7 +229,7 @@ _SLIDER_CSS = f"""
 _SPINBOX_CSS = f"""
     QSpinBox, QDoubleSpinBox {{
         background: {C['white']};
-        color: {C['text']};
+        color: {C.get('text', '#1A2233')};
         border: 1.5px solid {C['card_border']};
         border-radius: 8px;
         padding: 6px 10px;
@@ -261,7 +255,7 @@ _SPINBOX_CSS = f"""
 
 _RADIO_CSS = f"""
     QRadioButton {{
-        color: {C['text']};
+        color: {C.get('text', '#1A2233')};
         background: transparent;
         spacing: 6px;
         font-family: 'Segoe UI';
@@ -291,7 +285,7 @@ _TAB_CSS = f"""
     }}
     QTabBar::tab {{
         background: transparent;
-        color: {C['muted']};
+        color: {C.get('muted', '#6C757D')};
         font-family: 'Segoe UI';
         font-size: 9pt;
         padding: 9px 18px;
@@ -327,19 +321,17 @@ _PROGRESS_CSS = f"""
     QProgressBar::chunk {{
         background: qlineargradient(
             x1:0, y1:0, x2:1, y2:0,
-            stop:0 {C['accent']}, stop:1 #34AADC
+            stop:0 {C['accent']}, stop:1 {C.get('progress_gradient_end', '#34AADC')}
         );
         border-radius: 5px;
     }}
 """
 
-# QuestionCard – widget cho một câu hỏi
 class QuestionCard(QFrame):
-    """
-    Card bọc 1 câu hỏi khảo sát.
-    Hỗ trợ widget: 'slider' · 'spinbox' · 'dspinbox' · 'radio'
-    Signal first_touch(key) phát ra khi người dùng lần đầu tương tác.
-    """
+    '''
+    Card bao bọc xử lý logic và UI cho từng câu hỏi độc lập.
+    Hỗ trợ hiển thị dữ liệu qua slider, spinbox, dspinbox và radio.
+    '''
     first_touch = pyqtSignal(str)
 
     def __init__(self, q_def: dict, parent: QWidget | None = None):
@@ -347,7 +339,6 @@ class QuestionCard(QFrame):
         self.q = q_def
         self._touched = False
 
-        # Control references
         self.slider: QSlider | None = None
         self.spinbox: QSpinBox | None = None
         self.dspinbox: QDoubleSpinBox | None = None
@@ -358,20 +349,21 @@ class QuestionCard(QFrame):
         self._apply_card_style()
 
     def _build_ui(self):
+        '''Xây dựng layout và chọn loại widget tương ứng theo cấu hình dict truyền vào.'''
         root = QVBoxLayout(self)
         root.setContentsMargins(20, 16, 20, 16)
         root.setSpacing(12)
 
         q_lbl = QLabel(self.q["label"])
         q_lbl.setFont(QFont("Segoe UI Semibold", 10))
-        q_lbl.setStyleSheet(f"color: {C['text']}; background: transparent;")
+        q_lbl.setStyleSheet(f"color: {C.get('text', '#1A2233')}; background: transparent;")
         q_lbl.setWordWrap(True)
         root.addWidget(q_lbl)
 
         if hint := self.q.get("hint"):
             h_lbl = QLabel(hint)
             h_lbl.setFont(QFont("Segoe UI", 8))
-            h_lbl.setStyleSheet(f"color: {C['muted']}; background: transparent;")
+            h_lbl.setStyleSheet(f"color: {C.get('muted', '#6C757D')}; background: transparent;")
             root.addWidget(h_lbl)
 
         w = self.q["widget"]
@@ -385,12 +377,13 @@ class QuestionCard(QFrame):
             root.addLayout(self._make_radio())
 
     def _make_slider(self) -> QHBoxLayout:
+        '''Tạo và trả về thành phần slider hoàn chỉnh kèm nhãn miêu tả hai đầu.'''
         row = QHBoxLayout()
         row.setSpacing(10)
 
         lo = QLabel(self.q.get("lo", "Thấp"))
         lo.setFont(QFont("Segoe UI", 8))
-        lo.setStyleSheet(f"color: {C['muted']}; background: transparent;")
+        lo.setStyleSheet(f"color: {C.get('muted', '#6C757D')}; background: transparent;")
 
         self.slider = QSlider(Qt.Horizontal)
         self.slider.setRange(self.q["min"], self.q["max"])
@@ -400,7 +393,7 @@ class QuestionCard(QFrame):
 
         hi = QLabel(self.q.get("hi", "Cao"))
         hi.setFont(QFont("Segoe UI", 8))
-        hi.setStyleSheet(f"color: {C['muted']}; background: transparent;")
+        hi.setStyleSheet(f"color: {C.get('muted', '#6C757D')}; background: transparent;")
 
         self._val_badge = QLabel(str(self.slider.value()))
         self._val_badge.setFixedSize(32, 24)
@@ -425,6 +418,7 @@ class QuestionCard(QFrame):
         return row
 
     def _make_spinbox(self) -> QHBoxLayout:
+        '''Tạo Spinbox nhập liệu dạng số nguyên.'''
         row = QHBoxLayout()
         self.spinbox = QSpinBox()
         self.spinbox.setRange(self.q["min"], self.q["max"])
@@ -438,6 +432,7 @@ class QuestionCard(QFrame):
         return row
 
     def _make_dspinbox(self) -> QHBoxLayout:
+        '''Tạo Spinbox dạng số thập phân có độ chính xác cao.'''
         row = QHBoxLayout()
         self.dspinbox = QDoubleSpinBox()
         self.dspinbox.setRange(self.q["min"], self.q["max"])
@@ -453,18 +448,18 @@ class QuestionCard(QFrame):
         return row
 
     def _make_radio(self) -> QHBoxLayout:
+        '''Tạo nhóm Radio Buttons xử lý câu hỏi loại trắc nghiệm đa lựa chọn.'''
         row = QHBoxLayout()
         row.setSpacing(16)
         self.radio_group = QButtonGroup(self)
         default_idx = self.q.get("default", -1)
-        value_offset = self.q.get("value_offset", 0) # Lấy giá trị offset nếu có (như blood_pressure)
+        value_offset = self.q.get("value_offset", 0)
         
         for i, text in enumerate(self.q["options"]):
             rb = QRadioButton(text)
             rb.setStyleSheet(_RADIO_CSS)
             if i == default_idx:
                 rb.setChecked(True)
-            # Id của nút radio sẽ cộng thêm offset (VD: blood_pressure cần 1, 2, 3 thay vì 0, 1, 2)
             self.radio_group.addButton(rb, i + value_offset)
             rb.toggled.connect(lambda checked: self._mark() if checked else None)
             row.addWidget(rb)
@@ -472,11 +467,13 @@ class QuestionCard(QFrame):
         return row
 
     def _mark(self):
+        '''Ghi nhận hành động tương tác đầu tiên của người dùng để cập nhật tiến độ.'''
         if not self._touched:
             self._touched = True
             self.first_touch.emit(self.q["key"])
 
     def get_value(self) -> float:
+        '''Trích xuất kết quả nhập liệu đã số hóa chuẩn từ widget.'''
         w = self.q["widget"]
         if w == "slider" and self.slider:
             return float(self.slider.value())
@@ -489,6 +486,7 @@ class QuestionCard(QFrame):
         return 0.0
 
     def reset(self):
+        '''Reset thông số trên giao diện về trạng thái ban đầu của hệ thống.'''
         self._touched = False
         w = self.q["widget"]
         if w == "slider" and self.slider:
@@ -498,13 +496,13 @@ class QuestionCard(QFrame):
         elif w == "dspinbox" and self.dspinbox:
             self.dspinbox.setValue(self.q.get("default", 0.0))
         elif w == "radio" and self.radio_group:
-            # Cộng thêm value_offset khi reset radio nếu có
             default_val = self.q.get("default", 0) + self.q.get("value_offset", 0)
             btn = self.radio_group.button(default_val)
             if btn:
                 btn.setChecked(True)
 
     def _apply_card_style(self):
+        '''Phủ shadow gradient để tách biệt Card với nền chung.'''
         self.setObjectName("q_card")
         shadow = QGraphicsDropShadowEffect(self)
         shadow.setColor(QColor(0, 0, 0, 18))
@@ -519,16 +517,13 @@ class QuestionCard(QFrame):
             }}
         """)
 
-# SurveyScreen
-class SurveyScreen(QWidget):
-    """
-    Màn hình Khảo sát chính.
-    Signal:
-      survey_submitted(dict) – Phát ra dict chứa key là tên feature (trùng vs file json)
-                               và value là điểm người dùng nhập.
-    """
 
-    # THAY ĐỔI 1: Emit dict thay vì list
+class SurveyScreen(QWidget):
+    '''
+    Màn hình Khảo sát thu thập thông tin đánh giá toàn diện.
+    Quản lý luồng tiến độ tương tác với người dùng qua 20 câu hỏi.
+    Phát tín hiệu 'survey_submitted' sau khi hoàn tất bài trắc nghiệm.
+    '''
     survey_submitted = pyqtSignal(dict)
 
     def __init__(self, parent: QWidget | None = None):
@@ -540,6 +535,7 @@ class SurveyScreen(QWidget):
         self._refresh_footer()
 
     def _build_ui(self):
+        '''Kết hợp header, các tab nội dung và thanh trạng thái tiến độ tiến tới hoàn thiện.'''
         root = QVBoxLayout(self)
         root.setContentsMargins(24, 24, 24, 20)
         root.setSpacing(16)
@@ -558,6 +554,7 @@ class SurveyScreen(QWidget):
         root.addWidget(self._make_footer())
 
     def _make_header(self) -> QHBoxLayout:
+        '''Xây dựng vùng tiêu đề giới thiệu bài khảo sát.'''
         row = QHBoxLayout()
         row.setSpacing(12)
 
@@ -567,11 +564,11 @@ class SurveyScreen(QWidget):
 
         title = QLabel("Bộ câu hỏi đánh giá mức độ Stress")
         title.setFont(QFont("Segoe UI Semibold", 13))
-        title.setStyleSheet(f"color: {C['text']}; background: transparent;")
+        title.setStyleSheet(f"color: {C.get('text', '#1A2233')}; background: transparent;")
 
         sub = QLabel("Vui lòng hoàn thành tất cả 20 câu hỏi để nhận kết quả chính xác nhất.")
         sub.setFont(QFont("Segoe UI", 9))
-        sub.setStyleSheet(f"color: {C['muted']}; background: transparent;")
+        sub.setStyleSheet(f"color: {C.get('muted', '#6C757D')}; background: transparent;")
         sub.setWordWrap(True)
 
         txt_col = QVBoxLayout()
@@ -584,6 +581,7 @@ class SurveyScreen(QWidget):
         return row
 
     def _make_tab(self, tab_def: dict) -> QWidget:
+        '''Chuyển danh sách dữ liệu câu hỏi thành giao diện con ứng với từng tab.'''
         outer = QWidget()
         outer.setStyleSheet(f"background: {C['white']};")
 
@@ -603,7 +601,7 @@ class SurveyScreen(QWidget):
         layout.setContentsMargins(20, 20, 20, 20)
         layout.setSpacing(14)
 
-        desc = QLabel(f"Nhóm: {tab_def['tab_label'].split('  ')[-1]} — 4 câu hỏi")
+        desc = QLabel(f"Nhóm: {tab_def['tab_label'].split('  ')[-1]} — {len(tab_def['questions'])} câu hỏi")
         desc.setFont(QFont("Segoe UI", 8))
         desc.setStyleSheet(f"""
             background: {C['accent_light']};
@@ -626,6 +624,7 @@ class SurveyScreen(QWidget):
         return outer
 
     def _make_footer(self) -> QFrame:
+        '''Khu vực báo cáo quá trình và nút bấm Gửi (bị vô hiệu hóa cho tới khi hoàn thành).'''
         footer = QFrame()
         footer.setObjectName("survey_footer")
         footer.setStyleSheet(f"""
@@ -653,9 +652,9 @@ class SurveyScreen(QWidget):
         lbl_row = QHBoxLayout()
         prog_txt = QLabel("Tiến độ hoàn thành")
         prog_txt.setFont(QFont("Segoe UI", 9))
-        prog_txt.setStyleSheet(f"color: {C['text']}; background: transparent;")
+        prog_txt.setStyleSheet(f"color: {C.get('text', '#1A2233')}; background: transparent;")
 
-        self._prog_lbl = QLabel("0 / 20 câu")
+        self._prog_lbl = QLabel(f"0 / {TOTAL_QUESTIONS} câu")
         self._prog_lbl.setFont(QFont("Segoe UI Semibold", 9))
         self._prog_lbl.setStyleSheet(f"color: {C['accent']}; background: transparent;")
 
@@ -684,9 +683,9 @@ class SurveyScreen(QWidget):
         self._submit_btn.clicked.connect(self._on_submit)
         fl.addWidget(self._submit_btn)
 
-        hint = QLabel("⚠  Hãy hoàn thành tất cả 20 câu hỏi trước khi gửi.")
+        hint = QLabel(f"⚠  Hãy hoàn thành tất cả {TOTAL_QUESTIONS} câu hỏi trước khi gửi.")
         hint.setFont(QFont("Segoe UI", 8))
-        hint.setStyleSheet(f"color: {C['muted']}; background: transparent;")
+        hint.setStyleSheet(f"color: {C.get('muted', '#6C757D')}; background: transparent;")
         hint.setAlignment(Qt.AlignCenter)
         self._hint_lbl = hint
         fl.addWidget(hint)
@@ -694,10 +693,12 @@ class SurveyScreen(QWidget):
         return footer
 
     def _on_first_touch(self, key: str):
+        '''Ghi dấu việc một câu hỏi vừa được trả lời lần đầu tiên.'''
         self._touched_keys.add(key)
         self._refresh_footer()
 
     def _refresh_footer(self):
+        '''Đo lường tiến độ tổng quát và mở khóa tính năng gửi kết quả.'''
         n = len(self._touched_keys)
         self._prog_lbl.setText(f"{n} / {TOTAL_QUESTIONS} câu")
         self._prog_bar.setValue(n)
@@ -706,34 +707,21 @@ class SurveyScreen(QWidget):
         self._hint_lbl.setVisible(not ready)
 
     def _on_submit(self):
+        '''Phát ra tín hiệu kèm chuỗi dữ liệu khảo sát (Dạng Dictionary).'''
         payload = self.get_payload()
-        print("[SurveyScreen] Payload (Dictionary):", payload)
         self.survey_submitted.emit(payload)
 
-    # THAY ĐỔI 2: Hàm get_payload trả về dictionary
     def get_payload(self) -> dict[str, float]:
-        """
-        Trả về một dictionary. 
-        Mỗi key là tên biến (khớp với "features" của stress_model_random_forest_meta.json).
-        Ví dụ: {"anxiety_level": 12.0, "sleep_quality": 3.0, ...}
-        """
+        '''Đóng gói các giá trị thu thập được thành mảng dữ liệu có khóa định danh.'''
         return {card.q["key"]: card.get_value() for card in self._cards}
 
     def reset(self):
+        '''Xóa dữ liệu màn hình khảo sát, bắt đầu mới lại từ đầu.'''
         self._touched_keys.clear()
         for card in self._cards:
             card.reset()
         self._refresh_footer()
 
     def _apply_base_styles(self):
+        '''Áp dụng lớp nền chủ đạo chung theo hệ sinh thái ứng dụng.'''
         self.setStyleSheet(f"QWidget {{ background: {C['bg']}; }}")
-
-if __name__ == "__main__":
-    import sys
-    from PyQt5.QtWidgets import QApplication
-
-    app = QApplication(sys.argv)
-    window = SurveyScreen()
-    window.resize(1400, 900)
-    window.show()
-    sys.exit(app.exec_())

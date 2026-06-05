@@ -4,7 +4,7 @@ from PyQt5.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout,
     QScrollArea, QFrame, QLabel, QPushButton,
     QRadioButton, QButtonGroup, QComboBox,
-    QMessageBox, QSizePolicy, QSpacerItem,
+    QSizePolicy, QSpacerItem,
     QDateEdit,
 )
 from PyQt5.QtCore import Qt, QDate
@@ -13,18 +13,13 @@ from PyQt5.QtGui import (
     QBrush, QPen,
 )
 
-from src.views.components.widgets import GlowLineEdit, GoldButton
-from src.core.config import C, FONTS
+from src.core.config import C
 from src.views.components.widgets import GlowLineEdit, GoldButton, CustomMessageBox
-
-# Độ bo góc cố định cho Card
+from src.core.config import C, CURRENT_THEME
 _RADIUS_CARD = 12
 
-
-# ===========================================================================
-# Helpers
-# ===========================================================================
 def _make_card(parent: QWidget | None = None) -> QFrame:
+    '''Tạo một thẻ QFrame cơ bản làm container với nền trắng và viền chuẩn.'''
     card = QFrame(parent)
     card.setObjectName("settings_card")
     card.setStyleSheet(f"""
@@ -36,38 +31,38 @@ def _make_card(parent: QWidget | None = None) -> QFrame:
     """)
     return card
 
-
 def _make_section_title(text: str, emoji: str = "") -> QLabel:
+    '''Tạo tiêu đề chính cho từng khu vực cài đặt.'''
     prefix = f"{emoji}  " if emoji else ""
     lbl = QLabel(f"{prefix}{text}")
     lbl.setFont(QFont("Segoe UI Semibold", 11))
     lbl.setStyleSheet(f"color: {C['text_primary']}; background: transparent;")
     return lbl
 
-
 def _make_subsection_label(text: str) -> QLabel:
+    '''Tạo nhãn phụ cho các phần tử con trong cài đặt.'''
     lbl = QLabel(text)
     lbl.setFont(QFont("Segoe UI Semibold", 9))
     lbl.setStyleSheet(f"color: {C['text_muted']}; background: transparent;")
     return lbl
 
-
 def _make_field_label(text: str) -> QLabel:
+    '''Tạo nhãn chỉ định thông tin cho các trường nhập liệu.'''
     lbl = QLabel(text)
     lbl.setFont(QFont("Segoe UI Semibold", 9))
     lbl.setStyleSheet(f"color: {C['text_primary']}; background: transparent;")
     return lbl
 
-
 def _make_divider_line() -> QFrame:
+    '''Tạo đường kẻ ngang để phân chia nội dung.'''
     line = QFrame()
     line.setFrameShape(QFrame.HLine)
     line.setFixedHeight(1)
     line.setStyleSheet(f"background-color: {C['divider']}; border: none;")
     return line
 
-
 def _field_col(label_text: str, widget: QWidget) -> QVBoxLayout:
+    '''Tạo layout cột bao gồm nhãn và widget nhập liệu bên dưới.'''
     col = QVBoxLayout()
     col.setContentsMargins(0, 0, 0, 0)
     col.setSpacing(4)
@@ -76,10 +71,11 @@ def _field_col(label_text: str, widget: QWidget) -> QVBoxLayout:
     return col
 
 
-# ===========================================================================
-# AvatarWidget
-# ===========================================================================
 class AvatarWidget(QWidget):
+    '''
+    Widget hiển thị ảnh đại diện dạng chữ cái đầu (Avatar).
+    Tự động vẽ thành hình tròn với màu accent mặc định.
+    '''
     def __init__(self, initials: str = "U", size: int = 80,
                  parent: QWidget | None = None):
         super().__init__(parent)
@@ -88,6 +84,7 @@ class AvatarWidget(QWidget):
         self.setFixedSize(size, size)
 
     def paintEvent(self, event: QPaintEvent):
+        '''Vẽ ảnh đại diện tròn khi widget được yêu cầu cập nhật.'''
         p = QPainter(self)
         p.setRenderHint(QPainter.Antialiasing)
         p.setBrush(QBrush(QColor(C['accent'])))
@@ -100,20 +97,19 @@ class AvatarWidget(QWidget):
         p.end()
 
 
-# ===========================================================================
-# SettingsScreen
-# ===========================================================================
 class SettingsScreen(QWidget):
+    '''
+    Giao diện màn hình Cài Đặt (Settings).
+    Quản lý thông tin cá nhân, cấu hình mật khẩu và giao diện hiển thị.
+    '''
     def __init__(self, parent: QWidget | None = None):
         super().__init__(parent)
         self.setObjectName("SettingsScreen")
         self._build_ui()
         self._apply_page_style()
 
-    # =========================================================================
-    # BUILD UI
-    # =========================================================================
     def _build_ui(self):
+        '''Xây dựng toàn bộ layout và thành phần giao diện.'''
         root = QVBoxLayout(self)
         root.setContentsMargins(0, 0, 0, 0)
         root.setSpacing(0)
@@ -133,7 +129,7 @@ class SettingsScreen(QWidget):
                 background: {C['bg_main']}; width: 8px; border-radius: 4px;
             }}
             QScrollBar::handle:vertical {{
-                background: #CED4DA; border-radius: 4px; min-height: 30px;
+                background: {C['card_border']}; border-radius: 4px; min-height: 30px;
             }}
             QScrollBar::handle:vertical:hover {{ background: {C['text_muted']}; }}
             QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical {{ height: 0px; }}
@@ -158,6 +154,7 @@ class SettingsScreen(QWidget):
         root.addWidget(self._scroll_area)
 
     def _build_page_header(self):
+        '''Tạo tiêu đề lớn ở đầu trang Cài đặt.'''
         header_row = QHBoxLayout()
         header_row.setContentsMargins(0, 0, 0, 0)
         header_row.setSpacing(12)
@@ -193,6 +190,7 @@ class SettingsScreen(QWidget):
         self._main_layout.addLayout(header_row)
 
     def _build_profile_card(self):
+        '''Xây dựng thẻ thông tin cá nhân gồm Avatar và thông tin liên hệ.'''
         card = _make_card()
         card_layout = QVBoxLayout(card)
         card_layout.setContentsMargins(24, 20, 24, 20)
@@ -316,6 +314,7 @@ class SettingsScreen(QWidget):
         self._main_layout.addWidget(card)
 
     def _build_security_card(self):
+        '''Xây dựng thẻ bảo mật, quản lý tính năng đổi mật khẩu an toàn.'''
         self._security_card = _make_card()
         card_layout = QVBoxLayout(self._security_card)
         card_layout.setContentsMargins(24, 20, 24, 20)
@@ -403,6 +402,7 @@ class SettingsScreen(QWidget):
         self._main_layout.addWidget(self._security_card)
 
     def _build_interface_card(self):
+        '''Xây dựng thẻ cấu hình giao diện, cho phép chuyển đổi chế độ sáng / tối.'''
         card = _make_card()
         card_layout = QVBoxLayout(card)
         card_layout.setContentsMargins(24, 20, 24, 20)
@@ -440,16 +440,21 @@ class SettingsScreen(QWidget):
         self._radio_dark.setStyleSheet(_radio_style(C['text_muted']))
         self._radio_group.addButton(self._radio_dark, 1)
 
+        from src.core.config import CURRENT_THEME
+        if CURRENT_THEME == "dark":
+            self._radio_dark.setChecked(True)
+        else:
+            self._radio_light.setChecked(True)
+
         radio_row.addWidget(self._radio_light)
         radio_row.addWidget(self._radio_dark)
         radio_row.addStretch()
         card_layout.addLayout(radio_row)
 
         note_frame = QFrame()
-        # Custom Style cho box Warning (sử dụng sắc thái vàng từ warning thông báo)
         note_frame.setStyleSheet(f"""
             QFrame {{
-                background-color: #FFF9E6;
+                background-color: {C.get('warning_bg', '#FFF9E6')};
                 border: 1px solid {C['warning']};
                 border-radius: 8px;
             }}
@@ -465,7 +470,7 @@ class SettingsScreen(QWidget):
         note_text = QLabel("Chức năng Dark Mode hiện đang được phát triển. Thay đổi sẽ được áp dụng khi khởi động lại ứng dụng.")
         note_text.setFont(QFont("Segoe UI", 8))
         note_text.setWordWrap(True)
-        note_text.setStyleSheet("color: #856404; background: transparent;")
+        note_text.setStyleSheet(f"color: {C.get('warning_text', '#856404')}; background: transparent;")
 
         note_layout.addWidget(note_icon, alignment=Qt.AlignTop)
         note_layout.addWidget(note_text, 1)
@@ -474,6 +479,7 @@ class SettingsScreen(QWidget):
         self._main_layout.addWidget(card)
 
     def _build_bottom_actions(self):
+        '''Tạo dải nút hành động (Xóa form, Lưu cài đặt) ở dưới cùng.'''
         actions_row = QHBoxLayout()
         actions_row.setContentsMargins(0, 4, 0, 0)
         actions_row.setSpacing(12)
@@ -490,7 +496,11 @@ class SettingsScreen(QWidget):
                 border: 1.5px solid {C['card_border']};
                 border-radius: 8px;
             }}
-            QPushButton:hover {{ background-color: #F1F3F5; color: {C['text_primary']}; border-color: #ADB5BD; }}
+            QPushButton:hover {{ 
+                background-color: {C.get('btn_outline_bg', '#F1F3F5')}; 
+                color: {C['text_primary']}; 
+                border-color: {C.get('btn_outline_border', '#ADB5BD')}; 
+            }}
         """)
         self._btn_reset.clicked.connect(self._on_reset)
 
@@ -502,12 +512,11 @@ class SettingsScreen(QWidget):
         self._main_layout.addLayout(actions_row)
 
     def _apply_page_style(self):
+        '''Đồng bộ màu nền chủ đạo cho toàn trang Cài đặt.'''
         self.setStyleSheet(f"QWidget#SettingsScreen {{ background-color: {C['bg_main']}; }}")
 
-    # =========================================================================
-    # UI SLOTS (Chỉ chứa logic xử lý trạng thái giao diện thuần túy)
-    # =========================================================================
     def _on_toggle_password_form(self, checked: bool):
+        '''Xử lý trạng thái hiển thị của khung nhập mật khẩu.'''
         self._pw_form_widget.setVisible(checked)
         self._btn_toggle_pw.setText("✕  Đóng" if checked else "🔑  Đổi mật khẩu")
         if not checked:
@@ -516,18 +525,21 @@ class SettingsScreen(QWidget):
             self._input_confirm_pw.clear()
 
     def _on_reset(self):
+        '''Làm mới toàn bộ thông tin đang chỉnh sửa trên các khung nhập liệu.'''
         self._input_name.clear()
         self._input_phone.clear()
         self._combo_gender.setCurrentIndex(0)
 
-    # PUBLIC API (Được gọi và điều khiển trực tiếp bởi Controller)
     def _on_change_avatar(self):
+        '''Kích hoạt chức năng đổi ảnh đại diện (Hiện tại đang phát triển).'''
         CustomMessageBox.show_warning(self, "Thông báo", "Chức năng tải ảnh đại diện đang được phát triển.")
 
     def _show_warning(self, message: str):
+        '''Hiển thị hộp thoại cảnh báo.'''
         CustomMessageBox.show_warning(self, "Cảnh báo", message)
 
     def load_profile(self, name: str, email: str = "", phone: str = "", gender: str = "Nam", dob: QDate = None):
+        '''Nạp thông tin người dùng thực tế vào các khung nhập liệu.'''
         self._input_name.setText(name)
         self._input_email.setText(email)
         self._input_phone.setText(phone)
@@ -544,6 +556,7 @@ class SettingsScreen(QWidget):
         self._avatar_widget.update()
 
     def get_settings_data(self) -> dict:
+        '''Đóng gói các thay đổi của người dùng trả về dạng từ điển để xử lý lưu.'''
         return {
             "name":   self._input_name.text().strip(),
             "phone":  self._input_phone.text().strip(),

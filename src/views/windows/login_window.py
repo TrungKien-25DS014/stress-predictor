@@ -7,16 +7,12 @@ from PyQt5.QtWidgets import (
     QApplication, QSizePolicy, QStackedWidget,
     QDateEdit, QComboBox
 )
-from PyQt5.QtCore import (
-    Qt, pyqtSignal, QDate
-)
+from PyQt5.QtCore import Qt, pyqtSignal, QDate
 from PyQt5.QtGui import QFont, QColor, QPainter, QLinearGradient, QPen
 
-# Import từ thư mục project của bạn
 from src.views.components.widgets import GlowLineEdit, GoldButton
 from src.core.config import C
 
-# Style chung cho nút Vàng Ánh Kim (Metallic Gold Gradient) - Lấy từ config
 GOLD_BTN_STYLE = f"""
     QPushButton {{
         background: qlineargradient(x1:0, y1:0, x2:1, y2:0, 
@@ -37,16 +33,19 @@ GOLD_BTN_STYLE = f"""
     }}
 """
 
-# =====================================================================
-# CỘT TRÁI: BRAND PANEL
-# =====================================================================
+
 class BrandPanel(QWidget):
+    '''
+    Thành phần trình bày thương hiệu với nền gradient và họa tiết đặc trưng.
+    Thường được hiển thị bên góc trái màn hình đăng nhập/đăng ký.
+    '''
     def __init__(self, parent: QWidget | None = None):
         super().__init__(parent)
         self.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
         self._build_ui()
 
     def paintEvent(self, event):
+        '''Kết xuất thủ công các dải màu chuyển sắc gradient và bóng phụ họa cho nền.'''
         painter = QPainter(self)
         painter.setRenderHint(QPainter.Antialiasing)
         grad = QLinearGradient(0, 0, 0, self.height())
@@ -70,6 +69,7 @@ class BrandPanel(QWidget):
         painter.end()
 
     def _build_ui(self):
+        '''Khởi tạo logo, slogan và cấu trúc hiển thị thông tin giới thiệu tính năng.'''
         layout = QVBoxLayout(self)
         layout.setContentsMargins(48, 52, 48, 40)
         layout.setSpacing(0)
@@ -78,7 +78,7 @@ class BrandPanel(QWidget):
         logo_row.setAlignment(Qt.AlignLeft)
         logo_box = QFrame()
         logo_box.setFixedSize(44, 44)
-        logo_box.setStyleSheet("QFrame { background: rgba(255,255,255,0.15); border: none; border-radius: 12px; }")
+        logo_box.setStyleSheet(f"QFrame {{ background: {C.get('glass_dark', 'rgba(255,255,255,0.15)')}; border: none; border-radius: 12px; }}")
         logo_lbl = QLabel("◆")
         logo_lbl.setFont(QFont("Segoe UI", 16, QFont.Bold))
         logo_lbl.setAlignment(Qt.AlignCenter)
@@ -112,7 +112,7 @@ class BrandPanel(QWidget):
 
         tagline = QLabel("Ứng dụng phân tích sức khoẻ tâm lý dành riêng\ncho sinh viên — dựa trên dữ liệu khoa học.")
         tagline.setFont(QFont("Segoe UI", 10))
-        tagline.setStyleSheet("color: rgba(255,255,255,0.68); background: transparent;")
+        tagline.setStyleSheet(f"color: {C.get('glass_high', 'rgba(255,255,255,0.68)')}; background: transparent;")
         tagline.setWordWrap(True)
         layout.addWidget(tagline)
         layout.addSpacing(36)
@@ -130,18 +130,19 @@ class BrandPanel(QWidget):
         footer_row = QHBoxLayout()
         ver = QLabel("Stress Predictor  v1.0")
         ver.setFont(QFont("Segoe UI", 8))
-        ver.setStyleSheet("color: rgba(255,255,255,0.32); background: transparent;")
+        ver.setStyleSheet(f"color: {C.get('glass_hover', 'rgba(255,255,255,0.32)')}; background: transparent;")
         edition = QLabel("Clinical Light")
         edition.setFont(QFont("Segoe UI", 8))
-        edition.setStyleSheet("color: rgba(255,255,255,0.32); background: transparent;")
+        edition.setStyleSheet(f"color: {C.get('glass_hover', 'rgba(255,255,255,0.32)')}; background: transparent;")
         footer_row.addWidget(ver)
         footer_row.addStretch()
         footer_row.addWidget(edition)
         layout.addLayout(footer_row)
 
     def _make_pill(self, icon: str, text: str) -> QFrame:
+        '''Tạo các nhãn dạng viên thuốc (pill) trình bày nhanh các tính năng quan trọng.'''
         pill = QFrame()
-        pill.setStyleSheet("QFrame { background: rgba(255,255,255,0.09); border: none; border-radius: 10px; }")
+        pill.setStyleSheet(f"QFrame {{ background: {C.get('glass_light', 'rgba(255,255,255,0.09)')}; border: none; border-radius: 10px; }}")
         row = QHBoxLayout(pill)
         row.setContentsMargins(16, 11, 16, 11)
         row.setSpacing(12)
@@ -150,14 +151,15 @@ class BrandPanel(QWidget):
         ico.setStyleSheet("background: transparent;")
         txt = QLabel(text)
         txt.setFont(QFont("Segoe UI", 9))
-        txt.setStyleSheet("color: rgba(255,255,255,0.9); background: transparent; font-weight: 500;")
-        row.addWidget(ico); row.addWidget(txt); row.addStretch()
+        txt.setStyleSheet(f"color: {C.get('glass_full', 'rgba(255,255,255,0.9)')}; background: transparent; font-weight: 500;")
+        row.addWidget(ico)
+        row.addWidget(txt)
+        row.addStretch()
         return pill
 
-# =====================================================================
-# HÀM TẠO PANE TRẮNG NỔI CHUNG
-# =====================================================================
+
 def create_floating_card(parent_widget: QWidget, width: int = 480) -> tuple[QVBoxLayout, QFrame]:
+    '''Tạo thẻ Form nổi bồng bềnh sử dụng bóng đổ tinh tế đổ khối lên trung tâm màn hình.'''
     parent_widget.setStyleSheet(f"background: {C['bg']};") 
     
     main_layout = QVBoxLayout(parent_widget)
@@ -211,10 +213,12 @@ def create_floating_card(parent_widget: QWidget, width: int = 480) -> tuple[QVBo
     
     return card_layout, card
 
-# =====================================================================
-# CỘT PHẢI: CLASS 1 - ĐĂNG NHẬP
-# =====================================================================
+
 class LoginPanel(QWidget):
+    '''
+    Thành phần giao diện quản lý nghiệp vụ đăng nhập vào hệ thống.
+    Hỗ trợ gửi đi yêu cầu kiểm tra tài khoản và chuyển trang đăng ký/quên MK.
+    '''
     login_requested = pyqtSignal(str, str)
     go_to_register = pyqtSignal()
     go_to_forgot_password = pyqtSignal()
@@ -224,6 +228,7 @@ class LoginPanel(QWidget):
         self._build_ui()
 
     def _build_ui(self):
+        '''Thiết lập chi tiết cấu trúc các khối Label, Input và Nút bấm.'''
         card_layout, _ = create_floating_card(self, width=460)
         card_layout.setContentsMargins(40, 45, 40, 40)
         
@@ -240,6 +245,7 @@ class LoginPanel(QWidget):
         card_layout.addLayout(self._make_footer_links())
 
     def _make_header(self) -> QVBoxLayout:
+        '''Dựng lời chào và thông điệp tiêu đề giới thiệu đầu form.'''
         col = QVBoxLayout()
         col.setSpacing(6)
         welcome = QLabel("Chào mừng trở lại 👋")
@@ -255,6 +261,7 @@ class LoginPanel(QWidget):
         return col
 
     def _make_form_fields(self) -> QVBoxLayout:
+        '''Tạo lập cặp nhãn trường thông tin Tên đăng nhập và Mật khẩu.'''
         col = QVBoxLayout()
         col.setSpacing(10)
         
@@ -281,6 +288,7 @@ class LoginPanel(QWidget):
         return col
 
     def _make_options_row(self) -> QHBoxLayout:
+        '''Kết nối tính năng 'Ghi nhớ đăng nhập' cùng liên kết đến 'Quên Mật Khẩu'.'''
         row = QHBoxLayout()
         self._remember_cb = QCheckBox("Ghi nhớ tôi")
         self._remember_cb.setStyleSheet(f"color: {C['text']}; background: transparent;")
@@ -294,12 +302,14 @@ class LoginPanel(QWidget):
         return row
 
     def _make_login_btn(self) -> GoldButton:
+        '''Dựng nút Vàng chủ đạo kích hoạt nghiệp vụ đăng nhập.'''
         self._login_btn = GoldButton("ĐĂNG NHẬP", height=53) 
         self._login_btn.setStyleSheet(GOLD_BTN_STYLE)
         self._login_btn.clicked.connect(self._on_login)
         return self._login_btn
 
     def _make_divider_line(self) -> QWidget:
+        '''Tạo nét vạch ngăn cách tinh tế giữa khu vực Đăng nhập và Footer.'''
         container = QWidget()
         container.setStyleSheet("background: transparent;")
         row = QHBoxLayout(container)
@@ -311,6 +321,7 @@ class LoginPanel(QWidget):
         return container
 
     def _make_footer_links(self) -> QHBoxLayout:
+        '''Dải liên kết dẫn đường sang luồng Đăng ký tài khoản dành cho người dùng mới.'''
         row = QHBoxLayout()
         row.setAlignment(Qt.AlignCenter)
         hint = QLabel("Chưa có tài khoản?")
@@ -323,12 +334,14 @@ class LoginPanel(QWidget):
         return row
 
     def _field_label(self, text: str) -> QLabel:
+        '''Chuyên biệt hóa style cho chữ chú thích phía trên các QLineEdit.'''
         lbl = QLabel(text)
         lbl.setFont(QFont("Segoe UI Semibold", 9))
         lbl.setStyleSheet(f"color: {C['text']}; background: transparent;")
         return lbl
 
     def _on_login(self):
+        '''Xác thực cấp độ form và phát tín hiệu chứa user/pass cho Controller xử lý.'''
         username = self._username_input.text().strip()
         password = self._password_input.text()
         
@@ -341,14 +354,16 @@ class LoginPanel(QWidget):
         self.login_requested.emit(username, password) 
 
     def show_error(self, message: str):
+        '''Trực quan hóa đoạn chuỗi báo lỗi bất thường.'''
         self._error_lbl.setText(message)
         self._error_lbl.setVisible(True)
 
 
-# =====================================================================
-# CỘT PHẢI: CLASS 2 - ĐĂNG KÝ
-# =====================================================================
 class RegisterPanel(QWidget):
+    '''
+    Thành phần giao diện đảm nhận thao tác đăng ký thông tin người dùng.
+    Thu thập các trường bắt buộc rồi nén vào từ điển để gửi về tầng Model.
+    '''
     go_back = pyqtSignal()
     register_requested = pyqtSignal(dict) 
 
@@ -357,6 +372,7 @@ class RegisterPanel(QWidget):
         self._build_ui()
 
     def _build_ui(self):
+        '''Gắn các QLineEdit, QDateEdit theo cấu trúc lưới 2 cột nâng cao thẩm mỹ.'''
         card_layout, _ = create_floating_card(self, width=540)
         card_layout.setContentsMargins(40, 30, 40, 30)
         card_layout.setSpacing(8)
@@ -442,6 +458,7 @@ class RegisterPanel(QWidget):
         card_layout.addWidget(back_btn, alignment=Qt.AlignCenter)
 
     def _make_section_header(self, step: str, title: str) -> QWidget:
+        '''Dấu mốc đánh số nhỏ nhằm ngắt trang rõ ràng quá trình đăng ký.'''
         w = QWidget()
         w.setStyleSheet("background: transparent;")
         lay = QHBoxLayout(w)
@@ -457,12 +474,14 @@ class RegisterPanel(QWidget):
         return w
 
     def _field_label(self, text: str) -> QLabel:
+        '''Dựng chữ tiêu đề phía trên Input Box theo font quy định.'''
         lbl = QLabel(text)
         lbl.setFont(QFont("Segoe UI Semibold", 8))
         lbl.setStyleSheet(f"color: {C['text']}; background: transparent;")
         return lbl
 
     def _on_register(self):
+        '''Trích xuất dữ liệu, định dạng dict và kích hoạt luồng kiểm tra nghiệp vụ.'''
         data = {
             "email": self.email_input.text().strip(),
             "password": self.pwd_input.text(),
@@ -475,19 +494,21 @@ class RegisterPanel(QWidget):
         self.register_requested.emit(data)
 
 
-# =====================================================================
-# CỘT PHẢI: CLASS 3 - QUÊN MẬT KHẨU
-# =====================================================================
 class ForgotPasswordPanel(QWidget):
+    '''
+    Thành phần giao diện quản trị tiến trình cấp phát và tái thiết lập mật khẩu 
+    bằng cơ chế định danh qua mã OTP gửi tới Email.
+    '''
     go_back = pyqtSignal()
     send_otp_requested = pyqtSignal(str)
-    update_pwd_requested = pyqtSignal(str, str, str,str)
+    update_pwd_requested = pyqtSignal(str, str, str, str)
 
     def __init__(self, parent: QWidget | None = None):
         super().__init__(parent)
         self._build_ui()
 
     def _build_ui(self):
+        '''Chia Form làm 3 phân đoạn nhỏ: Yêu cầu OTP, Xác minh OTP và Khởi tạo Mật khẩu.'''
         card_layout, _ = create_floating_card(self, width=500)
         card_layout.setContentsMargins(40, 40, 40, 40)
         card_layout.setSpacing(10)
@@ -558,6 +579,7 @@ class ForgotPasswordPanel(QWidget):
         card_layout.addWidget(back_btn, alignment=Qt.AlignCenter)
 
     def _make_section_header(self, step: str, title: str) -> QWidget:
+        '''Đánh số chặng hành trình tương tự mục Đăng ký.'''
         w = QWidget()
         w.setStyleSheet("background: transparent;")
         lay = QHBoxLayout(w)
@@ -573,25 +595,27 @@ class ForgotPasswordPanel(QWidget):
         return w
 
     def _field_label(self, text: str) -> QLabel:
+        '''Trả về thành phần nhãn nhỏ theo style sheet chuẩn hóa.'''
         lbl = QLabel(text)
         lbl.setFont(QFont("Segoe UI Semibold", 8))
         lbl.setStyleSheet(f"color: {C['text']}; background: transparent;")
         return lbl
 
     def _on_send_otp(self):
+        '''Ghi nhận nhấn vào nút gửi OTP, báo hiệu gửi email và vô hiệu khóa nút tạm thời.'''
         email = self.email_input.text().strip()
         if email:
-            if email:
-                self.otp_btn.setText("Đang gửi...")
-                self.otp_btn.setEnabled(False)
-                QApplication.processEvents()
+            self.otp_btn.setText("Đang gửi...")
+            self.otp_btn.setEnabled(False)
+            QApplication.processEvents()
 
-                self.send_otp_requested.emit(email)
+            self.send_otp_requested.emit(email)
 
-                self.otp_btn.setText("Gửi OTP")
-                self.otp_btn.setEnabled(True)
+            self.otp_btn.setText("Gửi OTP")
+            self.otp_btn.setEnabled(True)
 
     def _on_update_pwd(self):
+        '''Phát thông báo chứa bộ 4 giá trị định dạng để thực hiện đặt lại mật khẩu an toàn.'''
         email = self.email_input.text().strip()
         otp = self.otp_input.text().strip()
         pwd = self.new_pwd.text()
@@ -599,10 +623,12 @@ class ForgotPasswordPanel(QWidget):
     
         self.update_pwd_requested.emit(email, otp, pwd, conf_pwd)
 
-# =====================================================================
-# CỬA SỔ CHÍNH QUẢN LÝ
-# =====================================================================
+
 class LoginScreen(QWidget):
+    '''
+    Lớp cửa sổ đăng nhập gốc - Chứa cấu trúc bao bọc BrandPanel ở phía bên trái
+    và thay đổi QStackedWidget (Chuyển trang Login/Register/Forgot) bên phải.
+    '''
     login_requested = pyqtSignal(str, str)
     register_requested = pyqtSignal(dict)
     send_otp_requested = pyqtSignal(str)
@@ -614,12 +640,14 @@ class LoginScreen(QWidget):
         self._build_ui()
 
     def _init_window(self):
+        '''Cấu hình kích cỡ cứng và thuật toán căn giữa màn hình cho Cửa sổ Khởi động.'''
         self.setWindowTitle("Xác thực – Vaultex Tracker")
         self.setFixedSize(1100, 700)
         screen = QApplication.primaryScreen().availableGeometry()
         self.move((screen.width() - 1100) // 2, (screen.height() - 700) // 2)
 
     def _build_ui(self):
+        '''Lắp ghép Layout ngang (HBox): Trái 45% (BrandPanel) - Phải 55% (QStackedWidget).'''
         root = QHBoxLayout(self)
         root.setContentsMargins(0, 0, 0, 0)
         root.setSpacing(0)
@@ -651,6 +679,7 @@ class LoginScreen(QWidget):
         root.addWidget(self._stack, 55)
 
     def keyPressEvent(self, event):
+        '''Cung cấp phím tắt Escape để nhanh chóng kết thúc tiến trình ứng dụng.'''
         if event.key() == Qt.Key_Escape:
             QApplication.quit()
         super().keyPressEvent(event)

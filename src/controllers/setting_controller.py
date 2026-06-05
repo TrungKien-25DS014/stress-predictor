@@ -1,7 +1,8 @@
 from PyQt5.QtWidgets import QMessageBox
 from PyQt5.QtCore import QDate
 from src.models.setting_model import SettingModel
-
+from src.views.components.widgets import CustomMessageBox
+from src.core import config
 class SettingController:
     def __init__(self, model: SettingModel, view):
         self.model = model
@@ -34,16 +35,24 @@ class SettingController:
                 gender=data['gender'] or "Nam",
                 dob=dob_qdate
             )
-            
+
     def handle_save_profile(self):
         if not self.current_user_id: return
         data = self.view.get_settings_data() 
-        
         success = self.model.update_user_profile(self.current_user_id, data)
+        new_theme = data.get("theme", "light")
+        theme_changed = (new_theme != config.CURRENT_THEME)
+        
+        if theme_changed:
+            config.save_theme_config(new_theme)
+            config.CURRENT_THEME = new_theme
         if success:
-            QMessageBox.information(self.view, "Thành công", "Đã cập nhật thông tin cá nhân!")
+            msg = "Đã cập nhật thông tin cá nhân!"
+            if theme_changed:
+                msg += "\n\nVui lòng khởi động lại ứng dụng để áp dụng giao diện mới."
+            CustomMessageBox.show_success(self.view, "Thành công", msg)
         else:
-            QMessageBox.warning(self.view, "Lỗi", "Không thể cập nhật thông tin. Vui lòng thử lại.")
+            CustomMessageBox.show_error(self.view, "Lỗi", "Không thể cập nhật thông tin. Vui lòng thử lại.")
             
     def handle_change_password(self):
         if not self.current_user_id: return
@@ -64,9 +73,10 @@ class SettingController:
             return
             
         # Gọi xuống Model
+        # Gọi xuống Model
         success, msg = self.model.update_password(self.current_user_id, cur_pw, new_pw)
         if success:
-            QMessageBox.information(self.view, "Thành công", msg)
+            CustomMessageBox.show_success(self.view, "Thành công", msg)
             self.view._btn_toggle_pw.setChecked(False) # Đóng form đổi mật khẩu lại
         else:
-            self.view._show_warning(msg)
+            CustomMessageBox.show_error(self.view, "Lỗi", msg)

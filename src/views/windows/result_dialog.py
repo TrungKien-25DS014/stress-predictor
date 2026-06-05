@@ -6,19 +6,15 @@ from typing import Optional
 from PyQt5.QtWidgets import (
     QDialog, QVBoxLayout, QHBoxLayout, QLabel, QFrame,
     QPushButton, QWidget, QSizePolicy, QGraphicsDropShadowEffect,
-    QGraphicsOpacityEffect,
 )
 from PyQt5.QtCore import (
-    Qt, QPropertyAnimation, QEasingCurve, QTimer,
-    QSequentialAnimationGroup, QParallelAnimationGroup,
-    pyqtSignal, QRect, QPoint,
+    Qt, QPropertyAnimation, QEasingCurve, QTimer, pyqtSignal, QRect, QPoint,
 )
 from PyQt5.QtGui import (
     QFont, QColor, QPainter, QPen, QBrush, QPainterPath,
-    QLinearGradient, QConicalGradient, QRadialGradient,
 )
 from src.views.components.widgets import CustomMessageBox
-from src.core.config import C  # Gọi chung file Config
+from src.core.config import C
 
 try:
     from matplotlib.figure import Figure
@@ -27,9 +23,6 @@ try:
 except ImportError:
     _MPL_OK = False
 
-# ---------------------------------------------------------------------------
-# Thứ tự features (khớp SurveyScreen.get_payload)
-# ---------------------------------------------------------------------------
 _FEATURE_ORDER = [
     "anxiety_level", "self_esteem", "mental_health_history", "depression",
     "headache", "blood_pressure", "sleep_quality", "breathing_problem",
@@ -39,9 +32,6 @@ _FEATURE_ORDER = [
     "extracurricular_activities", "bullying",
 ]
 
-# ---------------------------------------------------------------------------
-# 3 mức độ stress (class 0, 1, 2) - Lấy màu từ config
-# ---------------------------------------------------------------------------
 STRESS_LEVELS = {
     0: {
         "label":       "Thấp",
@@ -96,9 +86,6 @@ STRESS_LEVELS = {
     },
 }
 
-# ---------------------------------------------------------------------------
-# 5 nhóm yếu tố cho Radar / Pie
-# ---------------------------------------------------------------------------
 FACTOR_GROUPS = [
     {"name": "Tâm lý",    "keys": ["anxiety_level","self_esteem","mental_health_history","depression"], "color": C["factor_psy"]},
     {"name": "Thể chất",  "keys": ["headache","blood_pressure","sleep_quality","breathing_problem"],    "color": C["factor_phy"]},
@@ -116,10 +103,11 @@ _KEY_MAX = {
     "extracurricular_activities":5,"bullying":5,
 }
 
-# ===========================================================================
-# Arc Ring Widget
-# ===========================================================================
 class ArcRingWidget(QWidget):
+    '''
+    Thành phần vẽ đồ thị cung tròn hiển thị tổng thể mức stress.
+    Hỗ trợ hiệu ứng lướt (easing) mượt mà lúc ban đầu.
+    '''
     def __init__(self, color: str, pct: int, parent=None):
         super().__init__(parent)
         self._color   = QColor(color)
@@ -135,6 +123,7 @@ class ArcRingWidget(QWidget):
         QTimer.singleShot(300, self._timer.start)
 
     def _tick(self):
+        '''Cập nhật tiến trình đồ họa sau mỗi khung hình nhỏ.'''
         self._steps += 1
         t = min(self._steps / 50, 1.0)
         ease = 1.0 - (1.0 - t) ** 3
@@ -145,6 +134,7 @@ class ArcRingWidget(QWidget):
             self._timer.stop()
 
     def paintEvent(self, event):
+        '''Mã nền tảng vẽ hình vòng cung tỉ lệ %.'''
         painter = QPainter(self)
         painter.setRenderHint(QPainter.Antialiasing)
 
@@ -170,10 +160,11 @@ class ArcRingWidget(QWidget):
         painter.end()
 
 
-# ===========================================================================
-# Donut Chart Widget
-# ===========================================================================
 class DonutWidget(QWidget):
+    '''
+    Thành phần vẽ bánh (Donut) tự nhận diện môi trường cài đặt Matplotlib
+    hoặc dự phòng dùng QPainter Native.
+    '''
     def __init__(self, sizes, colors, labels, parent=None):
         super().__init__(parent)
         self._sizes  = sizes
@@ -186,8 +177,7 @@ class DonutWidget(QWidget):
             self._setup_mpl()
 
     def _setup_mpl(self):
-        from matplotlib.figure import Figure
-        from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
+        '''Tích hợp matplotlib nâng cao thay thế PyQt Native khi thư viện khả dụng.'''
         import matplotlib
         matplotlib.rcParams['font.family'] = 'DejaVu Sans'
         self._fig = Figure(figsize=(3, 3), dpi=90, facecolor="none")
@@ -200,6 +190,7 @@ class DonutWidget(QWidget):
         self._draw()
 
     def _draw(self):
+        '''Thực hiện trích xuất dữ liệu và vẽ thông qua FigureCanvas.'''
         self._fig.clear()
         ax = self._fig.add_subplot(111)
         ax.pie(self._sizes, colors=self._colors, startangle=90, wedgeprops=dict(linewidth=2.5, edgecolor="white", width=0.45))
@@ -208,6 +199,7 @@ class DonutWidget(QWidget):
         self._canvas.draw()
 
     def paintEvent(self, event):
+        '''Mã vẽ dự phòng với chuẩn QPainter (khi thiếu Matplotlib).'''
         if _MPL_OK:
             super().paintEvent(event)
             return
@@ -236,10 +228,11 @@ class DonutWidget(QWidget):
         painter.end()
 
 
-# ===========================================================================
-# ResultDialog
-# ===========================================================================
 class ResultDialog(QDialog):
+    '''
+    Cửa sổ hiển thị ngay tức thì đánh giá dự đoán của mô hình AI.
+    Cung cấp gợi ý và khả năng kết xuất báo cáo chuẩn PDF.
+    '''
     def __init__(self, level: int, payload: list[float], parent=None):
         super().__init__(parent, Qt.Window | Qt.FramelessWindowHint)
         self.setAttribute(Qt.WA_TranslucentBackground)
@@ -256,6 +249,7 @@ class ResultDialog(QDialog):
         self.resize(720, 600)
 
     def _compute_factors(self):
+        '''Chuẩn hóa lại dữ liệu đầu vào thành tỷ trọng 5 khía cạnh sức khỏe.'''
         if len(self._payload) != 20:
             return [1.0] * len(FACTOR_GROUPS)
         feat = dict(zip(_FEATURE_ORDER, self._payload))
@@ -266,6 +260,7 @@ class ResultDialog(QDialog):
         return sizes
 
     def _build_ui(self):
+        '''Đóng gói các khối giao diện lại thành chỉnh thể hoàn chỉnh.'''
         outer = QVBoxLayout(self)
         outer.setContentsMargins(20, 20, 20, 20)
 
@@ -297,6 +292,7 @@ class ResultDialog(QDialog):
         card_lay.addWidget(self._make_footer())
 
     def _make_header(self) -> QWidget:
+        '''Biểu diễn thông tin chủ đạo dạng Gradient nổi bật đánh giá cốt lõi.'''
         cfg = self._cfg
         header = QWidget()
         header.setFixedHeight(110)
@@ -311,7 +307,7 @@ class ResultDialog(QDialog):
 
         emoji_frame = QFrame()
         emoji_frame.setFixedSize(64, 64)
-        emoji_frame.setStyleSheet("QFrame { background: rgba(255,255,255,0.22); border-radius: 32px; }")
+        emoji_frame.setStyleSheet(f"QFrame {{ background: {C.get('glass_light', 'rgba(255,255,255,0.22)')}; border-radius: 32px; }}")
         ef_lay = QVBoxLayout(emoji_frame)
         ef_lay.setContentsMargins(0,0,0,0)
         emoji_lbl = QLabel(cfg["emoji"])
@@ -325,7 +321,7 @@ class ResultDialog(QDialog):
 
         tag = QLabel(f"  Mức độ stress: {cfg['label']}  ")
         tag.setFont(QFont("Segoe UI Semibold", 9))
-        tag.setStyleSheet("background: rgba(255,255,255,0.28); color: white; border-radius: 10px; padding: 2px 0px;")
+        tag.setStyleSheet(f"background: {C.get('glass_mid', 'rgba(255,255,255,0.28)')}; color: white; border-radius: 10px; padding: 2px 0px;")
         tag.setFixedHeight(22)
         tag.setAlignment(Qt.AlignLeft | Qt.AlignVCenter)
         tag.setMaximumWidth(200)
@@ -336,7 +332,7 @@ class ResultDialog(QDialog):
 
         sub_lbl = QLabel(cfg["sublabel"])
         sub_lbl.setFont(QFont("Segoe UI", 9))
-        sub_lbl.setStyleSheet("color: rgba(255,255,255,0.85); background: transparent;")
+        sub_lbl.setStyleSheet(f"color: {C.get('glass_high', 'rgba(255,255,255,0.85)')}; background: transparent;")
 
         txt_col.addWidget(tag)
         txt_col.addWidget(title_lbl)
@@ -346,10 +342,10 @@ class ResultDialog(QDialog):
         close_btn.setFixedSize(34, 34)
         close_btn.setCursor(Qt.PointingHandCursor)
         close_btn.setFont(QFont("Segoe UI", 11))
-        close_btn.setStyleSheet("""
-            QPushButton { background: rgba(255,255,255,0.20); color: white; border-radius: 17px; border: none; }
-            QPushButton:hover { background: rgba(255,255,255,0.38); }
-            QPushButton:pressed { background: rgba(0,0,0,0.15); }
+        close_btn.setStyleSheet(f"""
+            QPushButton {{ background: {C.get('glass_dark', 'rgba(255,255,255,0.20)')}; color: white; border-radius: 17px; border: none; }}
+            QPushButton:hover {{ background: {C.get('glass_hover', 'rgba(255,255,255,0.38)')}; }}
+            QPushButton:pressed {{ background: {C.get('glass_pressed', 'rgba(0,0,0,0.15)')}; }}
         """)
         close_btn.clicked.connect(self.accept)
 
@@ -359,6 +355,7 @@ class ResultDialog(QDialog):
         return header
 
     def _make_left_col(self) -> QVBoxLayout:
+        '''Dựng phần thông tin cốt lõi kèm biểu đồ vòng cung và thước đo.'''
         cfg = self._cfg
         col = QVBoxLayout()
         col.setSpacing(16)
@@ -384,6 +381,7 @@ class ResultDialog(QDialog):
         return col
 
     def _make_scale_bar(self) -> QFrame:
+        '''Render thang đo hiển thị tương quan 3 mức chỉ số Low-Mid-High.'''
         card = self._card_frame()
         lay  = QVBoxLayout(card)
         lay.setContentsMargins(18, 12, 18, 12)
@@ -422,6 +420,7 @@ class ResultDialog(QDialog):
         return card
 
     def _make_tips_card(self) -> QFrame:
+        '''Khu vực khuyên dùng và các thủ thuật y tế tương đối.'''
         cfg = self._cfg
         card = self._card_frame()
         card.setStyleSheet(f"QFrame {{ background: {cfg['tag_bg']}; border: none; border-radius: 14px; }}")
@@ -452,6 +451,7 @@ class ResultDialog(QDialog):
         return card
 
     def _make_right_col(self) -> QFrame:
+        '''Dựng phần thể hiện tỷ trọng tương đối giữa 5 yếu tố cốt cán.'''
         card = self._card_frame()
         lay  = QVBoxLayout(card)
         lay.setContentsMargins(18, 14, 18, 14)
@@ -503,6 +503,7 @@ class ResultDialog(QDialog):
         return card
 
     def _make_footer(self) -> QFrame:
+        '''Dải công cụ cuối bao gồm xuất PDF và quay lại ban đầu.'''
         cfg = self._cfg
         footer = QFrame()
         footer.setStyleSheet(f"""
@@ -521,9 +522,9 @@ class ResultDialog(QDialog):
         retry_btn.setCursor(Qt.PointingHandCursor)
         retry_btn.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
         retry_btn.setStyleSheet(f"""
-            QPushButton {{ background: {C['btn_retry_bg']}; color: {C['btn_retry_fg']}; border: 1.5px solid {C['btn_retry_border']}; border-radius: 10px; }}
-            QPushButton:hover {{ background: {C['btn_retry_hover']}; }}
-            QPushButton:pressed {{ background: {C['btn_retry_border']}; }}
+            QPushButton {{ background: {C.get('btn_retry_bg', '#F3F4F6')}; color: {C.get('btn_retry_fg', '#374151')}; border: 1.5px solid {C.get('btn_retry_border', '#D1D5DB')}; border-radius: 10px; }}
+            QPushButton:hover {{ background: {C.get('btn_retry_hover', '#E5E7EB')}; }}
+            QPushButton:pressed {{ background: {C.get('btn_retry_border', '#D1D5DB')}; }}
         """)
         retry_btn.clicked.connect(self.reject)
 
@@ -533,9 +534,9 @@ class ResultDialog(QDialog):
         pdf_btn.setCursor(Qt.PointingHandCursor)
         pdf_btn.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
         pdf_btn.setStyleSheet(f"""
-            QPushButton {{ background: {C['btn_pdf_bg']}; color: {C['btn_pdf_fg']}; border: 1.5px solid {C['btn_pdf_border']}; border-radius: 10px; }}
-            QPushButton:hover {{ background: {C['btn_pdf_hover']}; }}
-            QPushButton:pressed {{ background: {C['btn_pdf_pressed']}; }}
+            QPushButton {{ background: {C.get('btn_pdf_bg', '#EFF6FF')}; color: {C.get('btn_pdf_fg', '#1D4ED8')}; border: 1.5px solid {C.get('btn_pdf_border', '#93C5FD')}; border-radius: 10px; }}
+            QPushButton:hover {{ background: {C.get('btn_pdf_hover', '#DBEAFE')}; }}
+            QPushButton:pressed {{ background: {C.get('btn_pdf_pressed', '#BFDBFE')}; }}
         """)
         pdf_btn.clicked.connect(self._export_pdf)
 
@@ -560,7 +561,8 @@ class ResultDialog(QDialog):
         return footer
 
     def _export_pdf(self):
-        from PyQt5.QtWidgets import QFileDialog, QMessageBox
+        '''Kết xuất toàn bộ phân tích sang định dạng PDF thông qua ReportLab.'''
+        from PyQt5.QtWidgets import QFileDialog
         import datetime
 
         default_name = f"stress_report_{datetime.datetime.now().strftime('%Y%m%d_%H%M%S')}.pdf"
@@ -597,7 +599,6 @@ class ResultDialog(QDialog):
                 (os.path.join(_here, "DejaVuSans.ttf"), os.path.join(_here, "DejaVuSans-Bold.ttf"), "DejaVuSans", "DejaVuSans-Bold"),
                 ("/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf", "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf", "DejaVuSans", "DejaVuSans-Bold"),
                 ("C:/Windows/Fonts/arial.ttf", "C:/Windows/Fonts/arialbd.ttf", "Arial", "Arial-Bold"),
-                (os.path.expanduser("~/AppData/Local/Microsoft/Windows/Fonts/DejaVuSans.ttf"), os.path.expanduser("~/AppData/Local/Microsoft/Windows/Fonts/DejaVuSans-Bold.ttf"), "DejaVuSans", "DejaVuSans-Bold"),
             ]
             for reg_path, bold_path, reg_name, bold_name in _font_candidates:
                 if os.path.exists(reg_path) and os.path.exists(bold_path):
@@ -614,7 +615,6 @@ class ResultDialog(QDialog):
             style_title = ParagraphStyle("title", fontName=BOLD_FONT, fontSize=18, textColor=colors.HexColor(C['text_primary']), spaceAfter=4)
             style_sub = ParagraphStyle("sub", fontName=BASE_FONT, fontSize=10, textColor=colors.HexColor(C['text_muted']), spaceAfter=12)
             style_section = ParagraphStyle("section", fontName=BOLD_FONT, fontSize=12, textColor=colors.HexColor(C['text_primary']), spaceBefore=14, spaceAfter=6)
-            style_body = ParagraphStyle("body", fontName=BASE_FONT, fontSize=10, textColor=colors.HexColor(C['text_primary']), spaceAfter=4, leading=15)
             style_tip = ParagraphStyle("tip", fontName=BASE_FONT, fontSize=9.5, textColor=colors.HexColor(C['text_muted']), spaceAfter=5, leftIndent=12, leading=14)
 
             import datetime as dt
@@ -691,32 +691,36 @@ class ResultDialog(QDialog):
             doc = SimpleDocTemplate(path, pagesize=A4, leftMargin=2*cm, rightMargin=2*cm, topMargin=2*cm, bottomMargin=2*cm)
             doc.build(story)
 
-            CustomMessageBox.show_success(self, "Xuất PDF thành công", f"Đã lưu báo cáo tại:\n{path}")
+            CustomMessageBox.show_success(self, "Xuất PDF thành công", f"Đã lưu báo cáo tại:{path}")
 
         except ImportError:
-            CustomMessageBox.show_warning(self, "Thiếu thư viện", "Cần cài đặt ReportLab để xuất PDF:\n\npip install reportlab")
-            
+            CustomMessageBox.show_warning(self, "Thiếu thư viện", "Cần cài đặt ReportLab để xuất PDF: pip install reportlab")
         except Exception as e:
-            CustomMessageBox.show_error(self, "Lỗi xuất PDF", f"Không thể tạo file PDF:\n{str(e)}")
+            CustomMessageBox.show_error(self, "Lỗi xuất PDF", f"Không thể tạo file PDF: {str(e)}")
 
     @staticmethod
     def _card_frame() -> QFrame:
+        '''Chuyên xây dựng khung QFrame nền trắng bo góc chuẩn mực.'''
         card = QFrame()
         card.setStyleSheet(f"QFrame {{ background: {C['white']}; border: none; border-radius: 14px; }}")
         return card
 
     def mousePressEvent(self, event):
+        '''Gắn tọa độ chuột lên thuộc tính nhằm hỗ trợ hiệu ứng Drag tùy biến.'''
         if event.button() == Qt.LeftButton:
             self._drag_pos = event.globalPos() - self.frameGeometry().topLeft()
 
     def mouseMoveEvent(self, event):
+        '''Dịch chuyển bản đồ tọa độ của toàn Form qua các tính toán từ trỏ chuột.'''
         if event.buttons() == Qt.LeftButton and self._drag_pos:
             self.move(event.globalPos() - self._drag_pos)
 
     def mouseReleaseEvent(self, event):
+        '''Tẩy trắng tọa độ chuột khi thả ra.'''
         self._drag_pos = None
 
     def showEvent(self, event):
+        '''Kiểm tra vị trí và canh giữa Widget so với Cha của nó.'''
         super().showEvent(event)
         if self.parent():
             parent_rect = self.parent().frameGeometry()

@@ -4,6 +4,9 @@ from matplotlib.figure import Figure
 from PyQt5.QtWidgets import QWidget, QSizePolicy
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 
+# Import cấu hình màu chung
+from src.core.config import C
+
 class CanvasChart(FigureCanvas):
     """
     Widget biểu đồ Matplotlib nhúng trực tiếp vào layout PyQt5.
@@ -15,14 +18,14 @@ class CanvasChart(FigureCanvas):
       • Đường ngưỡng trung bình (dashed).
     """
 
-    # Màu sắc nhất quán với palette chung
-    _LINE_COLOR   = "#4A90D9"
-    _FILL_COLOR   = "#4A90D9"
-    _AVG_COLOR    = "#F59E0B"
-    _POINT_COLOR  = "#7B61FF"
-    _BG_COLOR     = "#FFFFFF"
-    _GRID_COLOR   = "#E8EDF2"
-    _TEXT_COLOR   = "#6B7280"
+    # Đồng bộ hoàn toàn màu sắc với palette chung từ config.py
+    _LINE_COLOR   = C["chart_blue"]
+    _FILL_COLOR   = C["chart_blue"]
+    _AVG_COLOR    = C["chart_amber"]
+    _POINT_COLOR  = C["chart_purple"]
+    _BG_COLOR     = C["white"]
+    _GRID_COLOR   = C["divider"]
+    _TEXT_COLOR   = C["text_muted"]
 
     def __init__(self, parent: QWidget | None = None) -> None:
         self._fig = Figure(figsize=(6, 3.5), dpi=96, facecolor=self._BG_COLOR)
