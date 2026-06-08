@@ -18,7 +18,7 @@ from src.views.screens.survey import SurveyScreen
 from src.views.screens.dashboard import DashboardScreen
 from src.views.screens.history import HistoryScreen
 from src.views.screens.settings import SettingsScreen
-from src.core.config import C, FONTS 
+from src.core.config import C, FONTS, theme_bus
 
 # ===========================================================================
 # ──  SIDEBAR  (tỷ lệ 2)
@@ -38,6 +38,7 @@ class Sidebar(QFrame):
         self._active_index = 0
         self._build_ui()
         self._apply_styles()
+        theme_bus.theme_changed.connect(self._on_theme_changed)
 
     def _build_ui(self):
         root = QVBoxLayout(self)
@@ -118,6 +119,22 @@ class Sidebar(QFrame):
             QPushButton#nav_btn:hover {{ background-color: {C['accent_light']}; color: {C['accent']}; }}
         """)
 
+    def _on_theme_changed(self, _theme: str):
+        # Rebuild để cập nhật màu label/footer
+        layout = self.layout()
+        while layout.count():
+            item = layout.takeAt(0)
+            if item.widget():
+                item.widget().deleteLater()
+        self.nav_buttons.clear()
+        self._active_index = 0
+        self._build_ui()
+        self._apply_styles()
+        # Thông báo cho MainWindow reconnect navigation
+        main_win = self.window()
+        if hasattr(main_win, '_connect_navigation'):
+            main_win._connect_navigation()
+
     def _set_active(self, active_idx: int):
         self._active_index = active_idx
         for btn in self.nav_buttons:
@@ -142,6 +159,7 @@ class RightPanel(QFrame):
         self.user_name = user_name
         self._build_ui()
         self._apply_styles()
+        theme_bus.theme_changed.connect(self._on_theme_changed)
 
     def _build_ui(self):
         root = QVBoxLayout(self)
@@ -272,6 +290,17 @@ class RightPanel(QFrame):
             QFrame#fact_row {{ background-color: {C['white']}; border: 1px solid {C['divider']}; border-radius: 8px; }}
         """)
 
+    def _on_theme_changed(self, _theme: str):
+        # Rebuild toàn bộ UI để cập nhật màu label/calendar
+        layout = self.layout()
+        # Xóa hết widget cũ
+        while layout.count():
+            item = layout.takeAt(0)
+            if item.widget():
+                item.widget().deleteLater()
+        self._build_ui()
+        self._apply_styles()
+
 # ===========================================================================
 # ──  MAIN WINDOW
 # ===========================================================================
@@ -288,6 +317,7 @@ class MainWindow(QMainWindow):
         self._build_layout()
         self._connect_navigation()
         self._apply_global_styles()
+        theme_bus.theme_changed.connect(self._on_theme_changed)
 
     def _init_window(self):
         self.setWindowTitle("Stress Predictor Dashboard")
@@ -355,6 +385,12 @@ class MainWindow(QMainWindow):
             QWidget#central_widget {{ background-color: {C['bg_main']}; }}
             QStackedWidget#main_stack {{ background-color: {C['bg_main']}; border: none; }}
         """)
+        palette = self.palette()
+        palette.setColor(QPalette.Window, QColor(C["bg_main"]))
+        self.setPalette(palette)
+
+    def _on_theme_changed(self, _theme: str):
+        self._apply_global_styles()
 
     def set_user(self, display_name: str):
         self.setWindowTitle(f"Stress Predictor – {display_name}")

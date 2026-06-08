@@ -45,11 +45,16 @@ _ROW_HEIGHT  = 52
 _PAGE_SIZE   = 8
 _RADIUS      = 12
 
-_LEVEL_CONFIG: dict[str, tuple[str, str, str]] = {
-    "Thấp"       : (C["hist_low_fg"], C["hist_low_bg"], "😌"),
-    "Bình thường": (C["hist_mid_fg"], C["hist_mid_bg"], "😐"),
-    "Cao"        : (C["hist_high_fg"], C["hist_high_bg"], "😰"),
-}
+def _get_level_config() -> dict[str, tuple[str, str, str]]:
+    """Đọc C động để luôn dùng màu theme hiện tại."""
+    return {
+        "Thấp"       : (C["hist_low_fg"], C["hist_low_bg"], "😌"),
+        "Bình thường": (C["hist_mid_fg"], C["hist_mid_bg"], "😐"),
+        "Cao"        : (C["hist_high_fg"], C["hist_high_bg"], "😰"),
+    }
+
+# Alias tương thích ngược (dùng ở _render_page sẽ gọi qua _get_level_config)
+_LEVEL_CONFIG = _get_level_config()
 
 _COLUMNS: list[str] = ["STT", "Ngày / Giờ", "Mức lo âu", "Chất lượng ngủ", "Điểm Stress", "Đánh giá", "Thao tác"]
 
@@ -161,14 +166,14 @@ class HistoryScreen(QWidget):
         lay = QHBoxLayout(w)
         lay.setContentsMargins(0, 0, 0, 0)
         title_col = QVBoxLayout()
-        title = QLabel("Lịch sử kiểm tra sức khỏe")
-        title.setFont(QFont(_FONT_FAMILY, 17, QFont.Bold))
-        title.setStyleSheet(f"color: {C['text_primary']};")
-        sub = QLabel("Theo dõi toàn bộ nhật ký đánh giá mức độ stress của bạn")
-        sub.setFont(QFont(_FONT_FAMILY, 9))
-        sub.setStyleSheet(f"color: {C['text_muted']};")
-        title_col.addWidget(title)
-        title_col.addWidget(sub)
+        self._title_lbl = QLabel("Lịch sử kiểm tra sức khỏe")
+        self._title_lbl.setFont(QFont(_FONT_FAMILY, 17, QFont.Bold))
+        self._title_lbl.setStyleSheet(f"color: {C['text_primary']};")
+        self._sub_lbl = QLabel("Theo dõi toàn bộ nhật ký đánh giá mức độ stress của bạn")
+        self._sub_lbl.setFont(QFont(_FONT_FAMILY, 9))
+        self._sub_lbl.setStyleSheet(f"color: {C['text_muted']};")
+        title_col.addWidget(self._title_lbl)
+        title_col.addWidget(self._sub_lbl)
         lay.addLayout(title_col, 1)
         return w
 
@@ -189,7 +194,17 @@ class HistoryScreen(QWidget):
             ("Điểm Stress Trung Bình", self._stat_avg_lbl, C["hist_avg_fg"], C["hist_avg_bg"], "stat_gold"),
         ]
         
-        for label, val_lbl, fg, bg, obj_name in stats:
+        self._stat_cards_meta: list[tuple] = []  # (card, val_lbl, name_lbl, obj_name, fg_key, bg_key)
+
+        stat_defs_keys = [
+            ("Tổng lần kiểm tra", self._stat_total_lbl, "accent",       "accent_light",  "stat_blue"),
+            ("Mức Nguy Cơ Cao",   self._stat_high_lbl,  "hist_high_fg", "hist_high_bg",  "stat_red"),
+            ("Điểm Stress Trung Bình", self._stat_avg_lbl, "hist_avg_fg", "hist_avg_bg", "stat_gold"),
+        ]
+
+        for label, val_lbl, fg_key, bg_key, obj_name in stat_defs_keys:
+            fg = C[fg_key]
+            bg = C[bg_key]
             card = QWidget()
             card.setObjectName(obj_name)
             card.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
@@ -205,11 +220,12 @@ class HistoryScreen(QWidget):
 
             name_lbl = QLabel(label)
             name_lbl.setFont(QFont(_FONT_FAMILY, 8))
-            name_lbl.setStyleSheet(f"color: {fg}AA; background: transparent; border: none;")
+            name_lbl.setStyleSheet(f"color: {fg}; opacity: 0.7; background: transparent; border: none;")
 
             cl.addWidget(val_lbl)
             cl.addWidget(name_lbl)
             lay.addWidget(card)
+            self._stat_cards_meta.append((card, val_lbl, name_lbl, obj_name, fg_key, bg_key))
         return w
 
     def _build_toolbar(self) -> QWidget:
@@ -339,6 +355,7 @@ class HistoryScreen(QWidget):
                 level
             ]
 
+            level_config = _get_level_config()
             for col_idx, value in enumerate(cells):
                 item = QTableWidgetItem(value)
                 if col_idx == 0:
@@ -346,9 +363,11 @@ class HistoryScreen(QWidget):
                     item.setForeground(QBrush(QColor(C["text_muted"])))
                 else:
                     item.setTextAlignment(Qt.AlignLeft | Qt.AlignVCenter)
+                    # Đảm bảo chữ luôn đủ sáng theo theme hiện tại
+                    item.setForeground(QBrush(QColor(C["text_primary"])))
 
                 if col_idx == 5:
-                    cfg = _LEVEL_CONFIG.get(value)
+                    cfg = level_config.get(value)
                     if cfg:
                         fg, bg, _ = cfg
                         item.setForeground(QBrush(QColor(fg)))
@@ -365,7 +384,7 @@ class HistoryScreen(QWidget):
             detail_btn = QPushButton("🔍 Chi tiết")
             detail_btn.setFixedHeight(32)
             detail_btn.setCursor(Qt.PointingHandCursor)
-            level_cfg = _LEVEL_CONFIG.get(level, (C["hist_all_fg"], C["hist_all_bg"], ""))
+            level_cfg = _get_level_config().get(level, (C["hist_all_fg"], C["hist_all_bg"], ""))
             fg_c, bg_c, _ = level_cfg
             detail_btn.setStyleSheet(f"QPushButton {{ background: {bg_c}; color: {fg_c}; border: none; border-radius: 8px; font-weight: 600; padding: 0 8px;}} QPushButton:hover {{ background: {fg_c}; color: {C['white']}; }}")
             detail_btn.clicked.connect(lambda checked, r=rec: self._open_detail(r))
@@ -448,8 +467,119 @@ class HistoryScreen(QWidget):
     def _apply_style(self):
         self.setStyleSheet(f"""
             HistoryScreen {{ background-color: {C['bg_main']}; }}
-            QFrame#history_card {{ background-color: {C['white']}; border: 1px solid {C['card_border']}; border-radius: {_RADIUS}px; }}
-            QTableWidget#history_table {{ background-color: {C['white']}; alternate-background-color: {C['hist_table_alt']}; border: none; outline: 0; }}
-            QTableWidget#history_table::item {{ border-bottom: 1px solid {C['divider']}; padding-left: 10px; }}
-            QHeaderView::section {{ background-color: {C['hist_header']}; color: {C['text_muted']}; font-weight: 600; padding-left: 10px; border: none; border-bottom: 2px solid {C['divider']}; }}
+
+            QFrame#history_card {{
+                background-color: {C['white']};
+                border: 1px solid {C['card_border']};
+                border-radius: {_RADIUS}px;
+            }}
+
+            /* ── Bảng dữ liệu ── */
+            QTableWidget#history_table {{
+                background-color: {C['white']};
+                alternate-background-color: {C['hist_table_alt']};
+                color: {C['text_primary']};
+                border: none;
+                outline: 0;
+                gridline-color: {C['divider']};
+            }}
+            QTableWidget#history_table::item {{
+                color: {C['text_primary']};
+                border-bottom: 1px solid {C['divider']};
+                padding-left: 10px;
+            }}
+            QTableWidget#history_table::item:selected {{
+                background-color: {C['accent_light']};
+                color: {C['accent']};
+            }}
+
+            /* ── Header cột ── */
+            QHeaderView::section {{
+                background-color: {C['hist_header']};
+                color: {C['text_primary']};
+                font-weight: 700;
+                font-size: 9pt;
+                padding-left: 10px;
+                border: none;
+                border-bottom: 2px solid {C['divider']};
+            }}
+
+            /* ── Toolbar / search ── */
+            QWidget#history_toolbar {{
+                background-color: {C['white']};
+            }}
+            QLineEdit {{
+                background: {C['input_bg']};
+                color: {C['text_primary']};
+                border: 1.5px solid {C['card_border']};
+                border-radius: 8px;
+                padding: 0 12px;
+            }}
+            QLineEdit:focus {{
+                border-color: {C['accent']};
+            }}
+
+            /* ── Phân trang label ── */
+            QLabel {{
+                color: {C['text_primary']};
+                background: transparent;
+            }}
+
+            /* ── Scrollbar ── */
+            QScrollBar:vertical {{
+                background: {C['bg_main']}; width: 8px; border-radius: 4px;
+            }}
+            QScrollBar::handle:vertical {{
+                background: {C['scroll_handle']}; border-radius: 4px; min-height: 30px;
+            }}
+            QScrollBar::handle:vertical:hover {{ background: {C['text_muted']}; }}
+            QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical {{ height: 0px; }}
         """)
+
+        # Refresh page buttons
+        if hasattr(self, "_prev_btn"):
+            for btn in [self._prev_btn, self._next_btn]:
+                btn.setStyleSheet(f"""
+                    QPushButton {{
+                        background: {C['accent_light']}; color: {C['accent']};
+                        border: 1px solid {C['divider']}; border-radius: 8px;
+                        padding: 0 16px; font-weight: 600;
+                    }}
+                    QPushButton:hover {{ background: {C['accent']}; color: #FFFFFF; }}
+                    QPushButton:disabled {{
+                        background: {C['bg_main']}; color: {C['text_muted']};
+                        border: 1px solid {C['divider']};
+                    }}
+                """)
+
+        # Refresh tiêu đề & sub
+        if hasattr(self, "_title_lbl"):
+            self._title_lbl.setStyleSheet(f"color: {C['text_primary']};")
+        if hasattr(self, "_sub_lbl"):
+            self._sub_lbl.setStyleSheet(f"color: {C['text_muted']};")
+
+        # Refresh record count label
+        if hasattr(self, "_record_count_label"):
+            self._record_count_label.setStyleSheet(f"color: {C['text_muted']};")
+
+        # Refresh page label
+        if hasattr(self, "_page_label"):
+            self._page_label.setStyleSheet(f"color: {C['text_primary']};")
+
+        # Refresh stat cards màu nền + chữ
+        if hasattr(self, "_stat_cards_meta"):
+            for card, val_lbl, name_lbl, obj_name, fg_key, bg_key in self._stat_cards_meta:
+                fg = C[fg_key]
+                bg = C[bg_key]
+                card.setStyleSheet(f"QWidget#{obj_name} {{ background-color: {bg}; border: none; border-radius: 12px; }}")
+                val_lbl.setStyleSheet(f"color: {fg}; background: transparent; border: none;")
+                name_lbl.setStyleSheet(f"color: {fg}; background: transparent; border: none;")
+
+        # Refresh filter buttons
+        if hasattr(self, "_filter_btns"):
+            for btn_label, btn in self._filter_btns.items():
+                self._set_filter_btn_style(btn, active=(btn_label == self._active_filter))
+
+        # Re-render bảng để cập nhật màu từng cell
+        if hasattr(self, "_filtered_records") and self._filtered_records:
+            self._render_page()
