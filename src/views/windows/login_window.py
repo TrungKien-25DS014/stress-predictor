@@ -13,23 +13,27 @@ from PyQt5.QtGui import QFont, QColor, QPainter, QLinearGradient, QPen
 from src.views.components.widgets import GlowLineEdit, GoldButton
 from src.core.config import C
 
-GOLD_BTN_STYLE = f"""
+def _gold_btn_style() -> str:
+    """Trả về stylesheet nút vàng, đọc C động để hỗ trợ dark/light mode."""
+    return f"""
     QPushButton {{
-        background: qlineargradient(x1:0, y1:0, x2:1, y2:0, 
+        background: qlineargradient(x1:0, y1:0, x2:1, y2:0,
                                     stop:0 {C['btn_gold_edge']}, stop:0.5 {C['btn_gold_mid']}, stop:1 {C['btn_gold_edge']});
-        color: {C['text_primary']};
-        border-radius: 16px; 
+        color: {C['btn_gold_text']};
+        border-radius: 16px;
         font-weight: bold;
         font-size: 15px;
         border: 1px solid {C['btn_gold_border']};
     }}
     QPushButton:hover {{
-        background: qlineargradient(x1:0, y1:0, x2:1, y2:0, 
+        background: qlineargradient(x1:0, y1:0, x2:1, y2:0,
                                     stop:0 {C['btn_gold_h_edge']}, stop:0.5 {C['btn_gold_h_mid']}, stop:1 {C['btn_gold_h_edge']});
+        color: {C['btn_gold_text']};
     }}
     QPushButton:pressed {{
-        background: qlineargradient(x1:0, y1:0, x2:1, y2:0, 
+        background: qlineargradient(x1:0, y1:0, x2:1, y2:0,
                                     stop:0 {C['btn_gold_p_edge']}, stop:0.5 {C['btn_gold_p_mid']}, stop:1 {C['btn_gold_p_edge']});
+        color: {C['btn_gold_text']};
     }}
 """
 
@@ -106,7 +110,7 @@ class BrandPanel(QWidget):
 
         accent_bar = QFrame()
         accent_bar.setFixedSize(48, 3)
-        accent_bar.setStyleSheet("background: rgba(212,175,55,0.85); border: none; border-radius: 2px;")
+        accent_bar.setStyleSheet(f"background: {C.get('brand_accent_bar', 'rgba(212,175,55,0.85)')}; border: none; border-radius: 2px;")
         layout.addWidget(accent_bar)
         layout.addSpacing(18)
 
@@ -175,6 +179,14 @@ def create_floating_card(parent_widget: QWidget, width: int = 480) -> tuple[QVBo
             border-radius: 24px;  
             border: 1px solid {C['divider']};
         }}
+        QLabel {{
+            color: {C['text']};
+            background: transparent;
+        }}
+        QCheckBox {{
+            color: {C['text']};
+            background: transparent;
+        }}
         QLineEdit, QDateEdit, QComboBox {{
             background: {C['input_bg']};
             border: 1.2px solid {C['input_border']}; 
@@ -187,8 +199,8 @@ def create_floating_card(parent_widget: QWidget, width: int = 480) -> tuple[QVBo
             border: 1.5px solid {C['accent']};
             background: {C['white']}; 
         }}
-        QLineEdit::placeholder {{
-            color: {C['muted']};   
+        QLineEdit::placeholder-text {{
+            color: {C['input_placeholder']};   
         }}
         QDateEdit::drop-down, QComboBox::drop-down {{
             subcontrol-origin: padding;
@@ -304,7 +316,7 @@ class LoginPanel(QWidget):
     def _make_login_btn(self) -> GoldButton:
         '''Dựng nút Vàng chủ đạo kích hoạt nghiệp vụ đăng nhập.'''
         self._login_btn = GoldButton("ĐĂNG NHẬP", height=53) 
-        self._login_btn.setStyleSheet(GOLD_BTN_STYLE)
+        self._login_btn.setStyleSheet(_gold_btn_style())
         self._login_btn.clicked.connect(self._on_login)
         return self._login_btn
 
@@ -447,7 +459,7 @@ class RegisterPanel(QWidget):
         
         card_layout.addSpacing(15)
         self.reg_btn = GoldButton("HOÀN TẤT ĐĂNG KÝ →", height=51) 
-        self.reg_btn.setStyleSheet(GOLD_BTN_STYLE)
+        self.reg_btn.setStyleSheet(_gold_btn_style())
         self.reg_btn.clicked.connect(self._on_register)
         card_layout.addWidget(self.reg_btn)
         
@@ -568,7 +580,7 @@ class ForgotPasswordPanel(QWidget):
         
         card_layout.addSpacing(15)
         self.update_btn = GoldButton("CẬP NHẬT MẬT KHẨU →", height=51) 
-        self.update_btn.setStyleSheet(GOLD_BTN_STYLE)
+        self.update_btn.setStyleSheet(_gold_btn_style())
         self.update_btn.clicked.connect(self._on_update_pwd)
         card_layout.addWidget(self.update_btn)
         

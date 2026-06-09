@@ -73,6 +73,9 @@ LIGHT_COLORS = {
     "success":      "#28A745",
     "warning":      "#FFC107",
     "danger":       "#DC3545",
+    "success_hover": "#218838",
+    "warning_hover": "#D97706",
+    "danger_hover":  "#C82333",
     "success_bg":   "#E9F7EF",
     "warning_bg":   "#FFF9E6",
     "warning_text": "#856404",
@@ -83,7 +86,8 @@ LIGHT_COLORS = {
     "progress_gradient_end":"#34AADC",
 
     "brand_top":    "#0A2463", "brand_mid": "#1565C0", "brand_bot": "#0D47A1", "gold": "#D4AF37",
-    "input_bg":     "#F7F6F2", "input_border": "#E5E2DA",
+    "brand_accent_bar": "rgba(212,175,55,0.85)",
+    "input_bg":     "#F7F6F2", "input_border": "#E5E2DA", "input_placeholder": "#A0A8B8",
 
     "chart_blue":   "#4A90D9", "chart_purple": "#7B61FF", "chart_green": "#22C55E",
     "chart_amber":  "#F59E0B", "chart_red":    "#EF4444", "chart_darkred":"#9B1C1C",
@@ -96,10 +100,11 @@ LIGHT_COLORS = {
 
     "factor_psy": "#8B5CF6", "factor_phy": "#EF4444", "factor_env": "#06B6D4", "factor_edu": "#F59E0B", "factor_soc": "#10B981",
 
-    "hist_low_fg": "#16A34A", "hist_low_bg": "#F0FDF4", "hist_mid_fg": "#F59E0B", "hist_mid_bg": "#EFF6FF",
+    "hist_low_fg": "#16A34A", "hist_low_bg": "#F0FDF4", "hist_mid_fg": "#D97706", "hist_mid_bg": "#FFFBEB",
     "hist_high_fg": "#DC2626", "hist_high_bg": "#FEF2F2", "hist_avg_fg": "#B8860B", "hist_avg_bg": "#FFFBEB",
     "hist_all_fg": "#6B7280", "hist_all_bg": "#F3F4F6", "hist_table_alt": "#F8FAFC", "hist_header": "#F1F5F9",
 
+    "btn_gold_text":  "#1A1A2E",   # chữ trên nút vàng — tối để tương phản
     "btn_gold_edge": "#C89B3C", "btn_gold_mid": "#F7DA83", "btn_gold_h_edge": "#D9AF4E",
     "btn_gold_h_mid": "#FCE69C", "btn_gold_p_edge": "#B08226", "btn_gold_p_mid": "#E0C161", "btn_gold_border": "#B8862D",
 
@@ -146,6 +151,9 @@ DARK_COLORS.update({
     "success":      "#3DD68C",   # xanh lá sáng hơn
     "warning":      "#FFD166",   # vàng ấm
     "danger":       "#FF6B6B",   # đỏ san hô
+    "success_hover": "#2EBD7A",
+    "warning_hover": "#E6A800",
+    "danger_hover":  "#E05050",
 
     "success_bg":   "#1A3628",
     "warning_bg":   "#312508",
@@ -155,6 +163,7 @@ DARK_COLORS.update({
     # ── Input ──
     "input_bg":     "#2A2E42",
     "input_border": "#454B66",
+    "input_placeholder": "#6B7491",
 
     # ── Dashboard / bảng ──
     "dash_bg":      "#1C1F2E",

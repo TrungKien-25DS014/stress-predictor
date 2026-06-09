@@ -600,15 +600,15 @@ class CustomMessageBox(QDialog):
         if self.msg_type == "success":
             icon_lbl.setText("✅")
             btn_bg = C["success"]
-            btn_hover = "#218838"
+            btn_hover = C["success_hover"]
         elif self.msg_type == "warning":
             icon_lbl.setText("⚠️")
             btn_bg = C["warning"]
-            btn_hover = "#D97706"
+            btn_hover = C["warning_hover"]
         elif self.msg_type == "error":
             icon_lbl.setText("❌")
             btn_bg = C["danger"]
-            btn_hover = "#C82333"
+            btn_hover = C["danger_hover"]
         elif self.msg_type == "question":
             icon_lbl.setText("❓")
             btn_text = "Đồng ý"

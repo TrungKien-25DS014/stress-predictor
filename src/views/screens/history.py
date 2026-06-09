@@ -30,8 +30,8 @@ except ImportError:
         "bg_main":      "#F8F9FA", "bg_panel":     "#FFFFFF", "white":        "#FFFFFF",
         "text_primary": "#1A2233", "text_muted":   "#6C757D", "accent":       "#007AFF",
         "accent_light": "#E8F3FF", "divider":      "#E2E8F0", "card_border":  "#DEE2E6",
-        "hist_low_fg":  "#16A34A", "hist_low_bg":  "#F0FDF4", "hist_mid_fg":  "#F59E0B", 
-        "hist_mid_bg":  "#EFF6FF", "hist_high_fg": "#DC2626", "hist_high_bg": "#FEF2F2",
+        "hist_low_fg":  "#16A34A", "hist_low_bg":  "#F0FDF4", "hist_mid_fg":  "#D97706", 
+        "hist_mid_bg":  "#FFFBEB", "hist_high_fg": "#DC2626", "hist_high_bg": "#FEF2F2",
         "hist_avg_fg":  "#B8860B", "hist_avg_bg":  "#FFFBEB", "hist_all_fg":  "#6B7280", 
         "hist_all_bg":  "#F3F4F6", "hist_table_alt":"#F8FAFC", "hist_header": "#F1F5F9",
     }
