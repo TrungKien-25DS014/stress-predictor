@@ -572,126 +572,411 @@ class ResultDialog(QDialog):
 
         try:
             from reportlab.lib.pagesizes import A4
-            from reportlab.lib.units import cm
+            from reportlab.lib.units import cm, mm
             from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
             from reportlab.lib import colors
-            from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle, HRFlowable
+            from reportlab.platypus import (
+                SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle,
+                HRFlowable, KeepTogether,
+            )
+            from reportlab.platypus.flowables import Flowable
             from reportlab.pdfbase import pdfmetrics
             from reportlab.pdfbase.ttfonts import TTFont
-            import os
-            import re
+            from reportlab.graphics.shapes import Drawing, Rect, String, Line
+            from reportlab.graphics import renderPDF
+            import os, re, datetime as dt
 
-            cfg = self._cfg
-            level_names = {0: "Thấp", 1: "Trung bình", 2: "Cao"}
-            level_colors = {
-                0: colors.HexColor(C["detail_low_a"]),
-                1: colors.HexColor(C["detail_mid_a"]),
-                2: colors.HexColor(C["detail_high_a"]),
-            }
-            lv_color = level_colors[self._level]
-
+            # ── Font setup ────────────────────────────────────────────────
             BASE_FONT = "Helvetica"
             BOLD_FONT = "Helvetica-Bold"
-
             _here = os.path.dirname(os.path.abspath(__file__))
             _font_candidates = [
-                (os.path.join(_here, "fonts", "DejaVuSans.ttf"), os.path.join(_here, "fonts", "DejaVuSans-Bold.ttf"), "DejaVuSans", "DejaVuSans-Bold"),
-                (os.path.join(_here, "DejaVuSans.ttf"), os.path.join(_here, "DejaVuSans-Bold.ttf"), "DejaVuSans", "DejaVuSans-Bold"),
-                ("/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf", "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf", "DejaVuSans", "DejaVuSans-Bold"),
-                ("C:/Windows/Fonts/arial.ttf", "C:/Windows/Fonts/arialbd.ttf", "Arial", "Arial-Bold"),
+                (os.path.join(_here, "fonts", "DejaVuSans.ttf"),   os.path.join(_here, "fonts", "DejaVuSans-Bold.ttf"),   "DejaVuSans",  "DejaVuSans-Bold"),
+                (os.path.join(_here, "DejaVuSans.ttf"),            os.path.join(_here, "DejaVuSans-Bold.ttf"),            "DejaVuSans",  "DejaVuSans-Bold"),
+                ("/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf", "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf","DejaVuSans",  "DejaVuSans-Bold"),
+                ("C:/Windows/Fonts/arial.ttf",                      "C:/Windows/Fonts/arialbd.ttf",                        "Arial",       "Arial-Bold"),
             ]
             for reg_path, bold_path, reg_name, bold_name in _font_candidates:
                 if os.path.exists(reg_path) and os.path.exists(bold_path):
                     try:
                         pdfmetrics.registerFont(TTFont(reg_name, reg_path))
                         pdfmetrics.registerFont(TTFont(bold_name, bold_path))
-                        BASE_FONT = reg_name
-                        BOLD_FONT = bold_name
+                        BASE_FONT, BOLD_FONT = reg_name, bold_name
                         break
                     except Exception:
                         continue
 
-            styles = getSampleStyleSheet()
-            style_title = ParagraphStyle("title", fontName=BOLD_FONT, fontSize=18, textColor=colors.HexColor(C['text_primary']), spaceAfter=4)
-            style_sub = ParagraphStyle("sub", fontName=BASE_FONT, fontSize=10, textColor=colors.HexColor(C['text_muted']), spaceAfter=12)
-            style_section = ParagraphStyle("section", fontName=BOLD_FONT, fontSize=12, textColor=colors.HexColor(C['text_primary']), spaceBefore=14, spaceAfter=6)
-            style_tip = ParagraphStyle("tip", fontName=BASE_FONT, fontSize=9.5, textColor=colors.HexColor(C['text_muted']), spaceAfter=5, leftIndent=12, leading=14)
+            # ── Color palette ─────────────────────────────────────────────
+            cfg = self._cfg
+            level_names = {0: "Thấp", 1: "Trung bình", 2: "Cao"}
+            level_hex = {
+                0: C["detail_low_a"],
+                1: C["detail_mid_a"],
+                2: C["detail_high_a"],
+            }
+            lv_hex   = level_hex[self._level]
+            lv_color = colors.HexColor(lv_hex)
+            lv_light = colors.HexColor(cfg["tag_bg"])
 
-            import datetime as dt
+            GRAY_DARK  = colors.HexColor(C['text_primary'])
+            GRAY_MID   = colors.HexColor(C['text_muted'])
+            GRAY_LINE  = colors.HexColor(C['divider'])
+            BG_STRIPE  = colors.HexColor(C['bg_main'])
+            WHITE      = colors.white
+
             now_str = dt.datetime.now().strftime("%d/%m/%Y %H:%M")
+            PAGE_W, PAGE_H = A4
+            CONTENT_W = PAGE_W - 4*cm   # margins 2cm each side
 
-            story = []
-            story.append(Paragraph("Báo cáo phân tích Stress", style_title))
-            story.append(Paragraph(f"Thời gian: {now_str}", style_sub))
-            story.append(HRFlowable(width="100%", thickness=1.5, color=lv_color, spaceAfter=12))
+            # ── Paragraph styles ──────────────────────────────────────────
+            sty_title = ParagraphStyle(
+                "sty_title", fontName=BOLD_FONT, fontSize=22,
+                textColor=WHITE, spaceAfter=2, leading=26,
+            )
+            sty_sub_header = ParagraphStyle(
+                "sty_sub_header", fontName=BASE_FONT, fontSize=10,
+                textColor=colors.HexColor("#FFFFFF99"), spaceAfter=0,
+            )
+            sty_section = ParagraphStyle(
+                "sty_section", fontName=BOLD_FONT, fontSize=12,
+                textColor=GRAY_DARK, spaceBefore=6, spaceAfter=8,
+                borderPad=0,
+            )
+            sty_body = ParagraphStyle(
+                "sty_body", fontName=BASE_FONT, fontSize=10,
+                textColor=GRAY_DARK, leading=15,
+            )
+            sty_tip = ParagraphStyle(
+                "sty_tip", fontName=BASE_FONT, fontSize=9.5,
+                textColor=GRAY_MID, spaceAfter=6, leftIndent=8, leading=15,
+            )
+            sty_footer = ParagraphStyle(
+                "sty_footer", fontName=BASE_FONT, fontSize=8,
+                textColor=GRAY_MID, alignment=1,
+            )
 
-            story.append(Paragraph("Kết quả dự đoán", style_section))
+            # ── Custom Flowables ──────────────────────────────────────────
 
+            class GradientHeader(Flowable):
+                """Full-width coloured header banner with title + timestamp."""
+                def __init__(self, color_hex_a, color_hex_b, level_label, bar_pct, now_str, width, base_font, bold_font):
+                    super().__init__()
+                    self._ca   = colors.HexColor(color_hex_a)
+                    self._cb   = colors.HexColor(color_hex_b)
+                    self._lvl  = level_label
+                    self._pct  = bar_pct
+                    self._now  = now_str
+                    self.width = width
+                    self._bf   = bold_font
+                    self._nf   = base_font
+                    self.height = 110
+
+                def draw(self):
+                    c = self.canv
+                    # gradient via layered rects (reportlab has no native linear gradient)
+                    steps = 30
+                    for i in range(steps):
+                        t  = i / steps
+                        r  = self._ca.red   + t * (self._cb.red   - self._ca.red)
+                        g  = self._ca.green + t * (self._cb.green - self._ca.green)
+                        b  = self._ca.blue  + t * (self._cb.blue  - self._ca.blue)
+                        x0 = self.width * i / steps
+                        x1 = self.width * (i+1) / steps
+                        c.setFillColorRGB(r, g, b)
+                        c.rect(x0, 0, x1-x0+0.5, self.height, fill=1, stroke=0)
+
+                    # Decorative circle top-right
+                    c.setFillColorRGB(1, 1, 1, 0.08)
+                    c.circle(self.width - 20, self.height - 10, 80, fill=1, stroke=0)
+                    c.circle(self.width + 10, 20, 50, fill=1, stroke=0)
+
+                    # Title text
+                    c.setFillColor(colors.white)
+                    c.setFont(self._bf, 20)
+                    c.drawString(22, self.height - 36, "BÁO CÁO PHÂN TÍCH STRESS")
+
+                    # Level badge — width is computed from the rendered text
+                    # itself so longer labels (e.g. "Trung bình") never spill
+                    # outside their pill background
+                    lvl_text = f"Mức độ stress: {self._lvl}"
+                    c.setFont(self._bf, 10)
+                    badge_w = c.stringWidth(lvl_text, self._bf, 10) + 28
+                    c.setFillColorRGB(1, 1, 1, 0.22)
+                    c.roundRect(22, self.height - 72, badge_w, 24, 12, fill=1, stroke=0)
+                    c.setFillColor(colors.white)
+                    c.drawCentredString(22 + badge_w/2, self.height - 63, lvl_text)
+
+                    # Score badge — same dynamic-width treatment
+                    sc_text = f"Chỉ số: {self._pct}%"
+                    c.setFont(self._bf, 11)
+                    sc_w  = c.stringWidth(sc_text, self._bf, 11) + 28
+                    sc_x = 22 + badge_w + 10
+                    c.setFillColorRGB(1, 1, 1, 0.22)
+                    c.roundRect(sc_x, self.height - 72, sc_w, 24, 12, fill=1, stroke=0)
+                    c.setFillColor(colors.white)
+                    c.drawCentredString(sc_x + sc_w/2, self.height - 63, sc_text)
+
+                    # Horizontal score bar — anchored a fixed gap below the
+                    # badge row so it never collides with the timestamp below it
+                    bar_h  = 7
+                    bar_y  = (self.height - 72) - 8 - bar_h
+                    bar_w  = self.width - 44
+                    c.setFillColorRGB(1, 1, 1, 0.25)
+                    c.roundRect(22, bar_y, bar_w, bar_h, 3, fill=1, stroke=0)
+                    filled = bar_w * min(self._pct, 100) / 100
+                    c.setFillColorRGB(1, 1, 1, 0.90)
+                    c.roundRect(22, bar_y, filled, bar_h, 3, fill=1, stroke=0)
+
+                    # Timestamp — anchored below the bar (instead of a fixed
+                    # y=12 that used to sit underneath the bar)
+                    c.setFillColorRGB(1, 1, 1, 0.65)
+                    c.setFont(self._nf, 8.5)
+                    c.drawString(22, bar_y - 13, f"Thời gian tạo: {self._now}")
+
+            class SectionHeading(Flowable):
+                """Coloured left-accent bar + bold title."""
+                def __init__(self, text, accent_color, width, bold_font):
+                    super().__init__()
+                    self._text   = text
+                    self._accent = accent_color
+                    self.width   = width
+                    self._bf     = bold_font
+                    self.height  = 26
+
+                def draw(self):
+                    c = self.canv
+                    # accent bar
+                    c.setFillColor(self._accent)
+                    c.roundRect(0, 4, 4, 18, 2, fill=1, stroke=0)
+                    # light background
+                    c.setFillColorRGB(
+                        self._accent.red, self._accent.green, self._accent.blue, 0.07
+                    )
+                    c.roundRect(8, 2, self.width - 8, 22, 4, fill=1, stroke=0)
+                    # text
+                    c.setFillColor(colors.HexColor(C['text_primary']))
+                    c.setFont(self._bf, 11)
+                    c.drawString(18, 9, self._text)
+
+            class HorizontalBarChart(Flowable):
+                """Horizontal bar chart for factor distribution."""
+                def __init__(self, groups, sizes, width, base_font, bold_font):
+                    super().__init__()
+                    self._groups = groups
+                    self._sizes  = sizes
+                    self.width   = width
+                    self._nf     = base_font
+                    self._bf     = bold_font
+                    self.height  = len(groups) * 32 + 8
+
+                def draw(self):
+                    c     = self.canv
+                    total = sum(self._sizes) or 1
+                    bar_x = 90
+                    bar_w = self.width - bar_x - 55
+                    row_h = 32
+                    n     = len(self._groups)
+
+                    for i, (grp, size) in enumerate(zip(self._groups, self._sizes)):
+                        pct   = size / total * 100
+                        y     = self.height - (i + 1) * row_h + 4
+                        color = colors.HexColor(grp["color"])
+
+                        # row background alternating
+                        if i % 2 == 0:
+                            c.setFillColorRGB(0.97, 0.97, 0.97)
+                            c.rect(0, y - 2, self.width, row_h - 2, fill=1, stroke=0)
+
+                        # label
+                        c.setFillColor(colors.HexColor(C['text_primary']))
+                        c.setFont(self._nf, 9)
+                        c.drawString(6, y + 8, grp["name"])
+
+                        # track
+                        c.setFillColorRGB(0.88, 0.88, 0.88)
+                        c.roundRect(bar_x, y + 6, bar_w, 12, 6, fill=1, stroke=0)
+
+                        # fill
+                        filled = bar_w * pct / 100
+                        c.setFillColor(color)
+                        if filled > 0:
+                            c.roundRect(bar_x, y + 6, filled, 12, 6, fill=1, stroke=0)
+
+                        # pct label
+                        c.setFillColor(color)
+                        c.setFont(self._bf, 9)
+                        c.drawString(bar_x + bar_w + 6, y + 7, f"{pct:.1f}%")
+
+            class ScoreGauge(Flowable):
+                """Arc gauge showing the stress score."""
+                def __init__(self, pct, color_hex, width, base_font, bold_font):
+                    super().__init__()
+                    self._pct   = pct
+                    self._color = colors.HexColor(color_hex)
+                    self.width  = width
+                    self._nf    = base_font
+                    self._bf    = bold_font
+                    # The arc is drawn within a bounding box that reaches
+                    # cy + 2*r = 12 + 120 = 132 (plus a few pt for the 10pt
+                    # stroke width). The previous value of 90 was smaller than
+                    # the actual drawn content, so the gauge bled upward into
+                    # whatever flowable was placed above it on the page.
+                    self.height = 140
+
+                def draw(self):
+                    import math
+                    c  = self.canv
+                    cx = self.width / 2
+                    cy = 12
+                    r  = 60
+                    # background arc
+                    c.setStrokeColorRGB(0.88, 0.88, 0.88)
+                    c.setLineWidth(10)
+                    c.arc(cx-r, cy, cx+r, cy+r*2, 0, 180)
+                    # colored arc
+                    span = self._pct / 100 * 180
+                    c.setStrokeColor(self._color)
+                    c.setLineWidth(10)
+                    c.arc(cx-r, cy, cx+r, cy+r*2, 0, span)
+                    # percentage text
+                    c.setFillColor(self._color)
+                    c.setFont(self._bf, 22)
+                    c.drawCentredString(cx, cy + r - 14, f"{self._pct}%")
+                    c.setFillColor(colors.HexColor(C['text_muted']))
+                    c.setFont(self._nf, 8)
+                    c.drawCentredString(cx, cy + r - 26, "Chỉ số stress")
+
+            class TipBox(Flowable):
+                """Styled tip card with coloured left border."""
+                def __init__(self, text, accent_color, width, base_font):
+                    super().__init__()
+                    self._text   = text
+                    self._accent = accent_color
+                    self.width   = width
+                    self._nf     = base_font
+                    self.height  = 28
+
+                def draw(self):
+                    c = self.canv
+                    # light bg
+                    c.setFillColorRGB(
+                        self._accent.red, self._accent.green, self._accent.blue, 0.06
+                    )
+                    c.roundRect(0, 0, self.width, self.height - 4, 5, fill=1, stroke=0)
+                    # accent left border
+                    c.setFillColor(self._accent)
+                    c.rect(0, 0, 3, self.height - 4, fill=1, stroke=0)
+                    # text
+                    c.setFillColor(colors.HexColor(C['text_primary']))
+                    c.setFont(self._nf, 9.5)
+                    # clip long text
+                    max_w = self.width - 18
+                    c.drawString(12, 8, self._text[:90])
+
+            # ── Build story ───────────────────────────────────────────────
             level_label = level_names.get(self._level, "Không xác định")
             bar_pct     = cfg["bar_pct"]
-            table_data = [
-                ["Mức độ stress:", level_label],
-                ["Chỉ số:", f"{bar_pct}%"],
-                ["Mô tả:", cfg["sublabel"]],
+            story       = []
+
+            # 1. Header banner
+            story.append(GradientHeader(
+                cfg["gradient_a"], cfg["gradient_b"],
+                level_label, bar_pct, now_str,
+                CONTENT_W, BASE_FONT, BOLD_FONT,
+            ))
+            story.append(Spacer(1, 0.35*cm))
+
+            # 2. Summary row (gauge + prediction table side-by-side)
+            gauge_w = 5.5*cm
+            table_w = CONTENT_W - gauge_w - 0.4*cm
+
+            level_label_vn = level_label
+            pred_data = [
+                [Paragraph(f"<b>Mức độ stress</b>", ParagraphStyle("ph", fontName=BOLD_FONT, fontSize=10, textColor=GRAY_DARK)),
+                 Paragraph(f"<b>{level_label_vn}</b>", ParagraphStyle("phv", fontName=BOLD_FONT, fontSize=12, textColor=lv_color))],
+                [Paragraph("Chỉ số", ParagraphStyle("ph2", fontName=BASE_FONT, fontSize=10, textColor=GRAY_MID)),
+                 Paragraph(f"{bar_pct}%", ParagraphStyle("phv2", fontName=BOLD_FONT, fontSize=10, textColor=GRAY_DARK))],
+                [Paragraph("Mô tả", ParagraphStyle("ph3", fontName=BASE_FONT, fontSize=10, textColor=GRAY_MID)),
+                 Paragraph(cfg["sublabel"], ParagraphStyle("phv3", fontName=BASE_FONT, fontSize=10, textColor=GRAY_DARK, leading=14))],
             ]
-            t = Table(table_data, colWidths=[4*cm, 12*cm])
-            t.setStyle(TableStyle([
-                ("FONTNAME",  (0,0), (0,-1), BOLD_FONT),
-                ("FONTNAME",  (1,0), (1,-1), BASE_FONT),
-                ("FONTSIZE",  (0,0), (-1,-1), 10),
-                ("TEXTCOLOR", (0,0), (-1,-1), colors.HexColor(C['text_primary'])),
-                ("TEXTCOLOR", (1,0), (1,0), lv_color),
-                ("FONTNAME",  (1,0), (1,0), BOLD_FONT),
-                ("FONTSIZE",  (1,0), (1,0), 12),
-                ("ROWBACKGROUNDS", (0,0), (-1,-1), [colors.HexColor(C['bg_main']), colors.white]),
-                ("GRID", (0,0), (-1,-1), 0.5, colors.HexColor(C['divider'])),
-                ("TOPPADDING",    (0,0), (-1,-1), 6),
-                ("BOTTOMPADDING", (0,0), (-1,-1), 6),
-                ("LEFTPADDING",   (0,0), (-1,-1), 10),
+
+            pred_t = Table(pred_data, colWidths=[3.5*cm, table_w - 3.5*cm])
+            pred_t.setStyle(TableStyle([
+                ("FONTSIZE",       (0,0), (-1,-1), 10),
+                ("ROWBACKGROUNDS", (0,0), (-1,-1), [BG_STRIPE, WHITE]),
+                ("LINEBELOW",      (0,0), (-1,-2), 0.4, GRAY_LINE),
+                ("TOPPADDING",     (0,0), (-1,-1), 8),
+                ("BOTTOMPADDING",  (0,0), (-1,-1), 8),
+                ("LEFTPADDING",    (0,0), (-1,-1), 10),
+                ("RIGHTPADDING",   (0,0), (-1,-1), 8),
+                ("VALIGN",         (0,0), (-1,-1), "MIDDLE"),
+                ("ROUNDEDCORNERS", [6]),
             ]))
-            story.append(t)
-            story.append(Spacer(1, 0.4*cm))
 
-            story.append(Paragraph("Phân bổ yếu tố stress", style_section))
-            total = sum(self._factor_sizes) or 1
-            factor_rows = [["Nhóm yếu tố", "Tỉ lệ (%)"]]
-            for grp, size in zip(FACTOR_GROUPS, self._factor_sizes):
-                pct_val = size / total * 100
-                factor_rows.append([grp["name"], f"{pct_val:.1f}%"])
-
-            ft = Table(factor_rows, colWidths=[9*cm, 7*cm])
-            ft.setStyle(TableStyle([
-                ("FONTNAME",  (0,0), (-1,0),  BOLD_FONT),
-                ("FONTNAME",  (0,1), (-1,-1), BASE_FONT),
-                ("FONTSIZE",  (0,0), (-1,-1), 10),
-                ("BACKGROUND",(0,0), (-1,0),  colors.HexColor(C['divider'])),
-                ("ROWBACKGROUNDS", (0,1), (-1,-1), [colors.white, colors.HexColor(C['bg_main'])]),
-                ("GRID", (0,0), (-1,-1), 0.5, colors.HexColor(C['divider'])),
-                ("TOPPADDING",    (0,0), (-1,-1), 6),
-                ("BOTTOMPADDING", (0,0), (-1,-1), 6),
-                ("LEFTPADDING",   (0,0), (-1,-1), 10),
-                ("ALIGN", (1,0), (1,-1), "CENTER"),
+            summary_t = Table(
+                [[ScoreGauge(bar_pct, lv_hex, gauge_w, BASE_FONT, BOLD_FONT), pred_t]],
+                colWidths=[gauge_w, table_w],
+            )
+            summary_t.setStyle(TableStyle([
+                ("VALIGN",       (0,0), (-1,-1), "MIDDLE"),
+                ("LEFTPADDING",  (0,0), (0,-1), 0),
+                ("RIGHTPADDING", (0,0), (0,-1), 10),
+                ("TOPPADDING",   (0,0), (-1,-1), 0),
+                ("BOTTOMPADDING",(0,0), (-1,-1), 0),
             ]))
-            story.append(ft)
-            story.append(Spacer(1, 0.4*cm))
+            story.append(KeepTogether([
+                SectionHeading("Kết quả dự đoán", lv_color, CONTENT_W, BOLD_FONT),
+                Spacer(1, 0.25*cm),
+                summary_t,
+            ]))
+            story.append(Spacer(1, 0.35*cm))
 
-            story.append(Paragraph("Gợi ý cải thiện", style_section))
+            # 3. Factor distribution (horizontal bar chart)
+            story.append(KeepTogether([
+                SectionHeading("Phân bố yếu tố stress", lv_color, CONTENT_W, BOLD_FONT),
+                Spacer(1, 0.25*cm),
+                HorizontalBarChart(FACTOR_GROUPS, self._factor_sizes, CONTENT_W, BASE_FONT, BOLD_FONT),
+            ]))
+            story.append(Spacer(1, 0.35*cm))
+
+            # 4. Tips
+            clean_tips = []
             for tip in cfg["tips"]:
-                clean = re.sub(r'[𐀀-]', '', tip).strip()
-                clean = clean or tip
-                story.append(Paragraph(f"• {clean}", style_tip))
+                clean = re.sub(r'[^\x00-\x7F\u00C0-\u024F\u1E00-\u1EFF\u2013\u2014 ]', '', tip).strip()
+                clean_tips.append(clean or tip)
 
-            story.append(Spacer(1, 0.5*cm))
-            story.append(HRFlowable(width="100%", thickness=0.8, color=colors.HexColor(C['divider'])))
+            tip_blocks = [
+                SectionHeading("Gợi ý cải thiện", lv_color, CONTENT_W, BOLD_FONT),
+                Spacer(1, 0.3*cm),
+            ]
+            for tip in clean_tips:
+                tip_blocks.append(TipBox(tip, lv_color, CONTENT_W, BASE_FONT))
+                tip_blocks.append(Spacer(1, 0.15*cm))
+            story.append(KeepTogether(tip_blocks))
+
+            story.append(Spacer(1, 0.4*cm))
+            story.append(HRFlowable(width="100%", thickness=0.8, color=GRAY_LINE, spaceAfter=8))
             story.append(Paragraph(
-                "Báo cáo được tạo từ hệ thống Stress Predictor · Không thay thế tư vấn y tế chuyên nghiệp.",
-                ParagraphStyle("footer", fontName=BASE_FONT, fontSize=8, textColor=colors.HexColor(C['text_muted']), spaceAfter=0)
+                "Báo cáo được tạo từ hệ thống Stress Predictor  ·  Không thay thế tư vấn y tế chuyên nghiệp.",
+                sty_footer,
             ))
 
-            doc = SimpleDocTemplate(path, pagesize=A4, leftMargin=2*cm, rightMargin=2*cm, topMargin=2*cm, bottomMargin=2*cm)
-            doc.build(story)
+            # ── Page template with subtle page number ─────────────────────
+            def on_page(canvas, doc):
+                canvas.saveState()
+                canvas.setFillColor(GRAY_MID)
+                canvas.setFont(BASE_FONT, 8)
+                canvas.drawCentredString(PAGE_W / 2, 0.55*cm, f"Trang {doc.page}")
+                canvas.restoreState()
 
-            CustomMessageBox.show_success(self, "Xuất PDF thành công", f"Đã lưu báo cáo tại:{path}")
+            doc = SimpleDocTemplate(
+                path, pagesize=A4,
+                leftMargin=2*cm, rightMargin=2*cm,
+                topMargin=1.1*cm, bottomMargin=1.3*cm,
+            )
+            doc.build(story, onFirstPage=on_page, onLaterPages=on_page)
+
+            CustomMessageBox.show_success(self, "Xuất PDF thành công", f"Đã lưu báo cáo tại: {path}")
 
         except ImportError:
             CustomMessageBox.show_warning(self, "Thiếu thư viện", "Cần cài đặt ReportLab để xuất PDF: pip install reportlab")
